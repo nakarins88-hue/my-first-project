@@ -650,6 +650,11 @@ function loadTrack(index) {
   loadLyrics(track.trackName);
   updateEngineSelectorUI();
   
+  // Update lock screen media session details
+  if (typeof updateMediaSessionMetadata === 'function') {
+    updateMediaSessionMetadata(track);
+  }
+  
   // Update UI list items
   if (elLibraryList) {
     const songItems = elLibraryList.querySelectorAll('.song-item');
@@ -1048,6 +1053,12 @@ document.addEventListener('DOMContentLoaded', () => {
     
     // --- Bind Event Listeners defensively ---
     setupDOMEventListeners();
+
+    // --- Initialize PWA, Lockscreen, Mobile Navigation, and Pixel Art Parallax ---
+    if (typeof registerServiceWorker === 'function') registerServiceWorker();
+    if (typeof setupMediaSessionActions === 'function') setupMediaSessionActions();
+    if (typeof initMobileNavigation === 'function') initMobileNavigation();
+    if (typeof initPixelVibe === 'function') initPixelVibe();
 
     // --- Resilient Auto-fallback timer ---
     // If YouTube doesn't load/fails within 2.5 seconds, lock HTML5 preview player.
@@ -2014,4 +2025,458 @@ function drawPlayerVisualizer() {
   if (isPlaying) {
     waveOffset += 0.085;
   }
+}
+
+// ==========================================================================
+// PWA, Media Session, Mobile Navigation, and Cozy Pixel Parallax Engine
+// ==========================================================================
+
+// --- 21. Progressive Web App (PWA) Service Worker Registration ---
+function registerServiceWorker() {
+  if ('serviceWorker' in navigator) {
+    // Relative registration for subdirectory safety (e.g. /my-first-project/)
+    navigator.serviceWorker.register('./service-worker.js')
+      .then(reg => console.log('Service Worker: Registered successfully with scope:', reg.scope))
+      .catch(err => console.log('Service Worker: Registration failed:', err));
+  }
+}
+
+// --- 22. System Lock Screen Integration (Media Session API) ---
+function updateMediaSessionMetadata(track) {
+  if ('mediaSession' in navigator) {
+    const localCover = getLocalCoverUrl(track.trackName, track.collectionName);
+    // Construct full absolute URL for local cover to prevent CORS errors on Safari/Chrome
+    const absoluteCoverUrl = new URL(localCover, window.location.href).href;
+    
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: track.trackName,
+      artist: 'Jeff Bernat',
+      album: track.collectionName,
+      artwork: [
+        { src: absoluteCoverUrl, sizes: '512x512', type: 'image/png' }
+      ]
+    });
+    console.log("Media Session Metadata loaded:", track.trackName);
+  }
+}
+
+function setupMediaSessionActions() {
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.setActionHandler('play', () => {
+      playAudio();
+    });
+    navigator.mediaSession.setActionHandler('pause', () => {
+      pauseAudio();
+    });
+    navigator.mediaSession.setActionHandler('previoustrack', () => {
+      prevTrack();
+    });
+    navigator.mediaSession.setActionHandler('nexttrack', () => {
+      nextTrack();
+    });
+    console.log("Media Session lock screen actions registered.");
+  }
+}
+
+// --- 23. Mobile View App Nav Switcher ---
+function initMobileNavigation() {
+  const elLoungeGrid = document.querySelector('.lounge-grid');
+  const elNavTabs = document.querySelectorAll('.nav-tab');
+  
+  if (elLoungeGrid && elNavTabs.length > 0) {
+    // Set default view on start
+    elLoungeGrid.classList.add('view-lounge');
+    
+    elNavTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        elNavTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        
+        const targetTab = tab.getAttribute('data-tab'); // 'lounge' | 'playlist' | 'vibe'
+        
+        elLoungeGrid.classList.remove('view-lounge', 'view-playlist', 'view-vibe');
+        
+        if (targetTab === 'lounge') {
+          elLoungeGrid.classList.add('view-lounge');
+        } else if (targetTab === 'playlist') {
+          elLoungeGrid.classList.add('view-playlist');
+        } else if (targetTab === 'vibe') {
+          elLoungeGrid.classList.add('view-vibe');
+        }
+        
+        const tabTitle = tab.querySelector('span') ? tab.querySelector('span').textContent : targetTab;
+        showToast("Switched Screen", `สลับไปหน้าจอ ${tabTitle} แล้วค่ะ 📱`);
+      });
+    });
+  }
+}
+
+// --- 24. Cozy Romantic Pixel Art Parallax Engine ---
+let pixelCanvas = null;
+let pixelCtx = null;
+let pixelTime = 0;
+let bgOffset = 0;
+let midOffset = 0;
+let foreOffset = 0;
+let pixelStars = [];
+let pixelBuildings = [];
+let heartBeats = 0;
+let heartScale = 1;
+
+function initPixelVibe() {
+  pixelCanvas = document.getElementById('pixel-animation-canvas');
+  if (!pixelCanvas) return;
+  
+  pixelCtx = pixelCanvas.getContext('2d');
+  
+  // Set fixed retro virtual resolution
+  pixelCanvas.width = 320;
+  pixelCanvas.height = 240;
+  
+  // Generate random twinkling stars
+  pixelStars = [];
+  for (let i = 0; i < 40; i++) {
+    pixelStars.push({
+      x: Math.random() * 320,
+      y: Math.random() * 110,
+      blinkSpeed: 0.02 + Math.random() * 0.05,
+      phase: Math.random() * Math.PI * 2,
+      size: Math.random() > 0.8 ? 2 : 1
+    });
+  }
+  
+  // Generate background building layers
+  pixelBuildings = [];
+  let currentX = 0;
+  while (currentX < 640) {
+    const bWidth = 40 + Math.random() * 50;
+    const bHeight = 60 + Math.random() * 60;
+    pixelBuildings.push({
+      x: currentX,
+      width: bWidth,
+      height: bHeight,
+      windows: generateWindowGrid(bWidth, bHeight)
+    });
+    currentX += bWidth - 5; // Slight overlap
+  }
+  
+  // Start loop
+  animatePixelVibe();
+}
+
+function generateWindowGrid(bWidth, bHeight) {
+  const list = [];
+  const cols = Math.floor(bWidth / 12);
+  const rows = Math.floor(bHeight / 16);
+  
+  for (let c = 1; c < cols; c++) {
+    for (let r = 1; r < rows; r++) {
+      if (Math.random() > 0.65) {
+        list.push({
+          dx: c * 12,
+          dy: r * 16,
+          lit: Math.random() > 0.3,
+          flickerRate: 0.005 + Math.random() * 0.02,
+          phase: Math.random() * Math.PI
+        });
+      }
+    }
+  }
+  return list;
+}
+
+function animatePixelVibe() {
+  if (!pixelCanvas || !pixelCtx) return;
+  
+  drawPixelVibe();
+  
+  pixelTime += 1;
+  requestAnimationFrame(animatePixelVibe);
+}
+
+function drawPixelVibe() {
+  const ctx = pixelCtx;
+  const w = 320;
+  const h = 240;
+  const groundY = 195;
+  
+  // Update speeds linked to isPlaying
+  const speedMultiplier = isPlaying ? 1.0 : 0.0;
+  bgOffset = (bgOffset + 0.12 * speedMultiplier) % 320;
+  midOffset = (midOffset + 0.65 * speedMultiplier) % 640;
+  foreOffset = (foreOffset + 1.35 * speedMultiplier) % 320;
+  
+  // 1. Draw Sky Gradient (Midnight Deep Indigo)
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, groundY);
+  skyGrad.addColorStop(0, '#040712');
+  skyGrad.addColorStop(0.5, '#0c1020');
+  skyGrad.addColorStop(1, '#1b1d30');
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, w, groundY);
+  
+  // 2. Draw Stars (Twinkling)
+  pixelStars.forEach(star => {
+    const starOpacity = 0.3 + 0.7 * Math.abs(Math.sin(pixelTime * star.blinkSpeed + star.phase));
+    ctx.fillStyle = `rgba(255, 255, 255, ${starOpacity})`;
+    ctx.fillRect(star.x, star.y, star.size, star.size);
+  });
+  
+  // 3. Draw Pixel crescent Moon
+  ctx.fillStyle = '#fffae0';
+  ctx.shadowColor = '#fef08a';
+  ctx.beginPath();
+  ctx.arc(45, 40, 10, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // Subtract overlap for crescent cut
+  ctx.fillStyle = '#040712'; // match background sky top color
+  ctx.beginPath();
+  ctx.arc(39, 36, 10, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.shadowBlur = 0; // reset shadow
+  
+  // 4. Draw Background Buildings Silhouette (Slow Parallax)
+  ctx.fillStyle = '#101424';
+  pixelBuildings.forEach(b => {
+    let bx = b.x - bgOffset;
+    if (bx + b.width < 0) {
+      b.x += 640;
+      bx = b.x - bgOffset;
+    }
+    
+    ctx.fillRect(bx, groundY - b.height, b.width, b.height);
+    
+    b.windows.forEach(w => {
+      const isLit = w.lit && (Math.sin(pixelTime * w.flickerRate + w.phase) > -0.7);
+      if (isLit) {
+        ctx.fillStyle = '#eab308'; // Warm amber window
+        ctx.fillRect(bx + w.dx, groundY - b.height + w.dy, 4, 6);
+      }
+    });
+    ctx.fillStyle = '#101424'; // Reset fill for next building
+  });
+  
+  // 5. Draw Midground Elements (Mid Parallax)
+  let cafeX = 180 - midOffset;
+  if (cafeX + 110 < 0) cafeX += 640;
+  
+  // Cafe wood frame
+  ctx.fillStyle = '#1e1b18';
+  ctx.fillRect(cafeX, groundY - 45, 110, 45);
+  // Cafe glowing glass window
+  ctx.fillStyle = '#b45309';
+  ctx.fillRect(cafeX + 12, groundY - 33, 50, 24);
+  ctx.fillStyle = '#eab308';
+  ctx.fillRect(cafeX + 15, groundY - 30, 44, 20);
+  
+  // Inside Cafe silhouette couple
+  ctx.fillStyle = '#1e1b18';
+  ctx.fillRect(cafeX + 22, groundY - 18, 6, 8); // left head/shoulders
+  ctx.fillRect(cafeX + 48, groundY - 16, 6, 6); // right head
+  ctx.fillStyle = '#b45309';
+  ctx.fillRect(cafeX + 32, groundY - 16, 8, 2);  // table top
+  
+  // Cozy Café Signboard
+  ctx.fillStyle = '#78350f';
+  ctx.fillRect(cafeX + 20, groundY - 41, 70, 7);
+  ctx.fillStyle = '#fef08a';
+  ctx.fillRect(cafeX + 25, groundY - 39, 3, 3);
+  ctx.fillRect(cafeX + 33, groundY - 39, 4, 3);
+  ctx.fillRect(cafeX + 42, groundY - 39, 5, 3);
+  
+  // Cafe awning
+  ctx.fillStyle = '#991b1b';
+  ctx.fillRect(cafeX - 5, groundY - 47, 120, 4);
+  
+  // Lamppost every 200px
+  for (let i = 0; i < 4; i++) {
+    let lx = (i * 200) - midOffset;
+    if (lx < -30) lx += 800;
+    
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(lx, groundY - 60, 3, 60);
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(lx - 2, groundY - 64, 7, 4);
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(lx - 1, groundY - 62, 5, 2);
+    
+    // Cone of Light
+    const coneGrad = ctx.createLinearGradient(lx, groundY - 60, lx, groundY);
+    coneGrad.addColorStop(0, 'rgba(253, 224, 71, 0.22)');
+    coneGrad.addColorStop(1, 'rgba(253, 224, 71, 0.0)');
+    ctx.fillStyle = coneGrad;
+    ctx.beginPath();
+    ctx.moveTo(lx - 1, groundY - 60);
+    ctx.lineTo(lx - 28, groundY);
+    ctx.lineTo(lx + 31, groundY);
+    ctx.closePath();
+    ctx.fill();
+    
+    // Floor reflection
+    ctx.fillStyle = 'rgba(253, 224, 71, 0.12)';
+    ctx.fillRect(lx - 20, groundY, 40, 2);
+  }
+  
+  // 6. Draw Pavement (Ground Floor)
+  ctx.fillStyle = '#0b0f19';
+  ctx.fillRect(0, groundY, w, h - groundY);
+  ctx.fillStyle = '#181f33';
+  ctx.fillRect(0, groundY, w, 2); // curb line
+  
+  // 7. Draw Weather/Mood Particles
+  if (theme === 'rain') {
+    ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+    ctx.lineWidth = 1.0;
+    for (let i = 0; i < 15; i++) {
+      const rx = (i * 35 + pixelTime * 3.5) % w;
+      const ry = (i * 45 + pixelTime * 11) % groundY;
+      ctx.beginPath();
+      ctx.moveTo(rx, ry);
+      ctx.lineTo(rx - 3, ry + 12);
+      ctx.stroke();
+    }
+  } else if (theme === 'cafe') {
+    ctx.fillStyle = 'rgba(251, 191, 36, 0.25)';
+    for (let i = 0; i < 8; i++) {
+      const bubbleX = (i * 50 + Math.sin(pixelTime * 0.02 + i) * 15) % w;
+      const bubbleY = groundY - 20 - ((i * 30 + pixelTime * 0.6) % 120);
+      ctx.beginPath();
+      ctx.arc(bubbleX, bubbleY, 2 + (i % 2), 0, Math.PI * 2);
+      ctx.fill();
+    }
+  } else if (theme === 'study') {
+    for (let i = 0; i < 10; i++) {
+      const emberX = (i * 42 + Math.sin(pixelTime * 0.04 + i) * 10) % w;
+      const emberY = groundY - 10 - ((i * 25 + pixelTime * 0.8) % 150);
+      const emberSize = 1.5 + (i % 2);
+      ctx.fillStyle = `rgba(249, 115, 22, ${0.15 + (i % 5) * 0.12})`;
+      ctx.fillRect(emberX, emberY, emberSize, emberSize);
+    }
+  }
+  
+  // 8. The Romantic Couple holding hands
+  const centerX = 160;
+  const isWalking = isPlaying;
+  
+  let yBob = 0;
+  if (isWalking) {
+    yBob = Math.abs(Math.sin(pixelTime * 0.14)) * 3.2;
+  } else {
+    yBob = Math.sin(pixelTime * 0.045) * 0.8;
+  }
+  
+  const boyX = centerX - 25;
+  const girlX = centerX + 10;
+  const handY = groundY - 14 - yBob;
+  
+  ctx.lineWidth = 2.0;
+  ctx.strokeStyle = '#206370'; // Teal Boy arm
+  ctx.beginPath();
+  ctx.moveTo(boyX + 5, groundY - 18 - yBob);
+  ctx.lineTo(centerX - 2, handY);
+  ctx.stroke();
+  
+  ctx.strokeStyle = '#9b4450'; // Pink Girl arm
+  ctx.beginPath();
+  ctx.moveTo(girlX + 2, groundY - 17 - yBob);
+  ctx.lineTo(centerX + 2, handY);
+  ctx.stroke();
+  
+  ctx.fillStyle = '#ffdbb5';
+  ctx.fillRect(centerX - 2, handY - 1, 4, 3);
+  
+  drawBoy(ctx, boyX, groundY - yBob, isWalking, pixelTime);
+  drawGirl(ctx, girlX, groundY - yBob, isWalking, pixelTime);
+  
+  // 9. Floating Love Heart above their heads
+  if (isWalking) {
+    heartScale = 0.95 + Math.sin(pixelTime * 0.1) * 0.12;
+  } else {
+    heartScale = 1.0;
+  }
+  
+  drawFloatingHeart(ctx, centerX, groundY - 45 - yBob, heartScale);
+}
+
+function drawFloatingHeart(ctx, x, y, scale) {
+  ctx.fillStyle = '#ef4444';
+  const hSize = Math.round(4 * scale);
+  if (hSize <= 0) return;
+  
+  ctx.fillRect(x - 3, y - 3, 2, 2);
+  ctx.fillRect(x + 1, y - 3, 2, 2);
+  ctx.fillRect(x - 4, y - 1, 8, 2);
+  ctx.fillRect(x - 3, y + 1, 6, 1);
+  ctx.fillRect(x - 2, y + 2, 4, 1);
+  ctx.fillRect(x - 1, y + 3, 2, 1);
+}
+
+function drawBoy(ctx, x, y, isWalking, time) {
+  ctx.fillStyle = '#2b231d';
+  ctx.fillRect(x - 2, y - 27, 8, 5);
+  ctx.fillRect(x - 3, y - 25, 3, 3);
+  
+  ctx.fillStyle = '#ffdbb5';
+  ctx.fillRect(x - 1, y - 23, 6, 6);
+  
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(x + 3, y - 21, 1, 2);
+  
+  ctx.fillStyle = '#206370';
+  ctx.fillRect(x - 3, y - 17, 8, 10);
+  ctx.fillStyle = '#164e58';
+  ctx.fillRect(x - 3, y - 17, 2, 10);
+  
+  ctx.fillStyle = '#3c405b';
+  let legL_Offset = 0;
+  let legR_Offset = 0;
+  if (isWalking) {
+    legL_Offset = Math.sin(time * 0.15) * 3;
+    legR_Offset = -Math.sin(time * 0.15) * 3;
+  }
+  
+  ctx.fillRect(x - 2 + legL_Offset, y - 7, 2, 7);
+  ctx.fillRect(x + 2 + legR_Offset, y - 7, 2, 7);
+  
+  ctx.fillStyle = '#111827';
+  ctx.fillRect(x - 2 + legL_Offset, y - 1, 3, 2);
+  ctx.fillRect(x + 2 + legR_Offset, y - 1, 3, 2);
+}
+
+function drawGirl(ctx, x, y, isWalking, time) {
+  ctx.fillStyle = '#703a2b';
+  ctx.fillRect(x + 1, y - 26, 7, 6);
+  ctx.fillRect(x + 4, y - 24, 4, 11);
+  
+  ctx.fillStyle = '#ffdbb5';
+  ctx.fillRect(x, y - 22, 6, 6);
+  
+  ctx.fillStyle = '#000000';
+  ctx.fillRect(x + 1, y - 20, 1, 2);
+  
+  ctx.fillStyle = '#f87171';
+  ctx.fillRect(x + 2, y - 18, 1, 1);
+  
+  ctx.fillStyle = '#9b4450';
+  ctx.fillRect(x - 1, y - 16, 7, 10);
+  ctx.fillStyle = '#b91c1c';
+  ctx.fillRect(x + 4, y - 16, 2, 10);
+  
+  ctx.fillStyle = '#f59e0b';
+  ctx.fillRect(x - 1, y - 6, 7, 1);
+  
+  ctx.fillStyle = '#ffdbb5';
+  let legL_Offset = 0;
+  let legR_Offset = 0;
+  if (isWalking) {
+    legL_Offset = -Math.sin(time * 0.15) * 3;
+    legR_Offset = Math.sin(time * 0.15) * 3;
+  }
+  
+  ctx.fillRect(x + legL_Offset, y - 5, 2, 5);
+  ctx.fillRect(x + 3 + legR_Offset, y - 5, 2, 5);
+  
+  ctx.fillStyle = '#111827';
+  ctx.fillRect(x - 1 + legL_Offset, y - 1, 3, 2);
+  ctx.fillRect(x + 2 + legR_Offset, y - 1, 3, 2);
 }
