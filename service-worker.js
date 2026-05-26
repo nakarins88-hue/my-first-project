@@ -1,9 +1,9 @@
-const CACHE_NAME = 'jeff-bernat-lounge-v7';
+const CACHE_NAME = 'jeff-bernat-lounge-v8';
 const ASSETS = [
   './',
   './index.html',
   './style.css',
-  './player.js',
+  './player-v8.js',
   './manifest.json',
   './default_cover.png',
   './cover_renaissance.png',

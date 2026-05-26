@@ -285,7 +285,22 @@ const BACKUP_TRACKS = [
 ];
 
 function populateAllLocalTracks() {
-  const localTracks = LOCAL_FILE_NAMES.map((fileName, idx) => {
+  // Filter out any mixes, sped ups, instrumentals, acoustics, intros/interludes, or alternate versions
+  const filteredFileNames = LOCAL_FILE_NAMES.filter(fileName => {
+    const clean = fileName.toLowerCase();
+    return !clean.includes('sped up') &&
+           !clean.includes('acoustic') &&
+           !clean.includes('inst.') &&
+           !clean.includes('inst)') &&
+           !clean.includes('instrumental') &&
+           !clean.includes('intro') &&
+           !clean.includes('interlude') &&
+           !clean.includes('accapella') &&
+           !clean.includes('remix') &&
+           !clean.includes('mix');
+  });
+
+  const localTracks = filteredFileNames.map((fileName, idx) => {
     const nameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
     const cleanFile = nameWithoutExt.toLowerCase().replace(/[^a-z0-9]/g, '');
     
@@ -500,6 +515,7 @@ function onPlayerStateChange(event) {
 
 // --- 7. Playback & Engine API Functions (Global scope for safety) ---
 function getLocalAudioUrl(trackName) {
+  if (!trackName) return null;
   const cleanTrack = trackName.toLowerCase().replace(/[^a-z0-9]/g, '');
   for (let fileName of LOCAL_FILE_NAMES) {
     const cleanFile = fileName.toLowerCase().replace(/\.[^/.]+$/, "").replace(/[^a-z0-9]/g, '');
@@ -695,6 +711,18 @@ function playAudio() {
   // Pause any conflicting audio elements first
   if (elMainAudio) elMainAudio.pause();
   if (isYtReady && ytPlayer) ytPlayer.pauseVideo();
+
+  // Switch dynamically to Vibe tab on mobile when a song starts playing so user sees the animation!
+  const elLoungeGrid = document.querySelector('.lounge-grid');
+  const elNavTabs = document.querySelectorAll('.nav-tab');
+  if (elLoungeGrid && elNavTabs.length > 0 && window.innerWidth <= 850) {
+    elNavTabs.forEach(t => t.classList.remove('active'));
+    const vibeTab = Array.from(elNavTabs).find(t => t.getAttribute('data-tab') === 'vibe');
+    if (vibeTab) vibeTab.classList.add('active');
+    
+    elLoungeGrid.classList.remove('view-lounge', 'view-playlist', 'view-vibe');
+    elLoungeGrid.classList.add('view-vibe');
+  }
   
   if (currentEngine === 'local' && (currentTrack.localUrl || getLocalAudioUrl(currentTrack.trackName))) {
     const activeUrl = currentTrack.localUrl || getLocalAudioUrl(currentTrack.trackName);
@@ -1407,21 +1435,51 @@ async function fetchSongsFromiTunes() {
         };
       });
       
-      // Filter out duplicate IDs
+      // Filter out duplicate IDs and any mix/alternate versions
       const uniqueIds = new Set();
       let mergedTracks = apiTracks.filter(t => {
-        if (uniqueIds.has(t.trackId)) return false;
+        if (!t.trackName || uniqueIds.has(t.trackId)) return false;
+        
+        const clean = t.trackName.toLowerCase();
+        if (clean.includes('sped up') ||
+            clean.includes('acoustic') ||
+            clean.includes('inst.') ||
+            clean.includes('inst)') ||
+            clean.includes('instrumental') ||
+            clean.includes('intro') ||
+            clean.includes('interlude') ||
+            clean.includes('accapella') ||
+            clean.includes('remix') ||
+            clean.includes('mix')) {
+          return false;
+        }
+        
         uniqueIds.add(t.trackId);
         return true;
       });
 
-      // Two-way merge: Find local files that didn't get matched in iTunes results
-      LOCAL_FILE_NAMES.forEach(fileName => {
+      // Two-way merge: Find local files that didn't get matched in iTunes results (filtering out mixes)
+      const filteredLocalMerge = LOCAL_FILE_NAMES.filter(fileName => {
+        const clean = fileName.toLowerCase();
+        return !clean.includes('sped up') &&
+               !clean.includes('acoustic') &&
+               !clean.includes('inst.') &&
+               !clean.includes('inst)') &&
+               !clean.includes('instrumental') &&
+               !clean.includes('intro') &&
+               !clean.includes('interlude') &&
+               !clean.includes('accapella') &&
+               !clean.includes('remix') &&
+               !clean.includes('mix');
+      });
+
+      filteredLocalMerge.forEach(fileName => {
         const nameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
         const cleanFile = nameWithoutExt.toLowerCase().replace(/[^a-z0-9]/g, '');
         
         // Check if this file is already matched in mergedTracks
         const isMatched = mergedTracks.some(t => {
+          if (!t.trackName) return false;
           const cleanTName = t.trackName.toLowerCase().replace(/[^a-z0-9]/g, '');
           return cleanFile.includes(cleanTName) || cleanTName.includes(cleanFile);
         });
@@ -2047,38 +2105,46 @@ function registerServiceWorker() {
 
 // --- 22. System Lock Screen Integration (Media Session API) ---
 function updateMediaSessionMetadata(track) {
-  if ('mediaSession' in navigator) {
-    const localCover = getLocalCoverUrl(track.trackName, track.collectionName);
-    // Construct full absolute URL for local cover to prevent CORS errors on Safari/Chrome
-    const absoluteCoverUrl = new URL(localCover, window.location.href).href;
-    
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: track.trackName,
-      artist: 'Jeff Bernat',
-      album: track.collectionName,
-      artwork: [
-        { src: absoluteCoverUrl, sizes: '512x512', type: 'image/png' }
-      ]
-    });
-    console.log("Media Session Metadata loaded:", track.trackName);
+  if ('mediaSession' in navigator && window.MediaMetadata) {
+    try {
+      const localCover = getLocalCoverUrl(track.trackName, track.collectionName);
+      // Construct full absolute URL for local cover to prevent CORS errors on Safari/Chrome
+      const absoluteCoverUrl = new URL(localCover, window.location.href).href;
+      
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: track.trackName,
+        artist: 'Jeff Bernat',
+        album: track.collectionName,
+        artwork: [
+          { src: absoluteCoverUrl, sizes: '512x512', type: 'image/png' }
+        ]
+      });
+      console.log("Media Session Metadata loaded:", track.trackName);
+    } catch (e) {
+      console.warn("Failed to set Media Session Metadata:", e);
+    }
   }
 }
 
 function setupMediaSessionActions() {
   if ('mediaSession' in navigator) {
-    navigator.mediaSession.setActionHandler('play', () => {
-      playAudio();
-    });
-    navigator.mediaSession.setActionHandler('pause', () => {
-      pauseAudio();
-    });
-    navigator.mediaSession.setActionHandler('previoustrack', () => {
-      prevTrack();
-    });
-    navigator.mediaSession.setActionHandler('nexttrack', () => {
-      nextTrack();
-    });
-    console.log("Media Session lock screen actions registered.");
+    try {
+      navigator.mediaSession.setActionHandler('play', () => {
+        playAudio();
+      });
+      navigator.mediaSession.setActionHandler('pause', () => {
+        pauseAudio();
+      });
+      navigator.mediaSession.setActionHandler('previoustrack', () => {
+        prevTrack();
+      });
+      navigator.mediaSession.setActionHandler('nexttrack', () => {
+        nextTrack();
+      });
+      console.log("Media Session lock screen actions registered.");
+    } catch (e) {
+      console.warn("Failed to setup Media Session actions:", e);
+    }
   }
 }
 
