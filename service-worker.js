@@ -1,4 +1,4 @@
-const CACHE_NAME = 'jeff-bernat-lounge-v1';
+const CACHE_NAME = 'jeff-bernat-lounge-v7';
 const ASSETS = [
   './',
   './index.html',

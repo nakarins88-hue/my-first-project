@@ -2036,7 +2036,11 @@ function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
     // Relative registration for subdirectory safety (e.g. /my-first-project/)
     navigator.serviceWorker.register('./service-worker.js')
-      .then(reg => console.log('Service Worker: Registered successfully with scope:', reg.scope))
+      .then(reg => {
+        console.log('Service Worker: Registered successfully with scope:', reg.scope);
+        // Force update checking immediately on page load to bust stale SW caches
+        reg.update();
+      })
       .catch(err => console.log('Service Worker: Registration failed:', err));
   }
 }
