@@ -696,7 +696,8 @@ function playAudio() {
     console.log("Playing via Local High-Quality Audio Engine:", activeUrl);
     
     if (elMainAudio) {
-      if (elMainAudio.src !== window.location.origin + '/' + activeUrl && !elMainAudio.src.startsWith('blob:')) {
+      const absActiveUrl = new URL(activeUrl, window.location.href).href;
+      if (elMainAudio.src !== absActiveUrl && !elMainAudio.src.startsWith('blob:')) {
         elMainAudio.src = activeUrl;
         elMainAudio.load();
       }
