@@ -1139,11 +1139,10 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Bind Event Listeners defensively ---
     setupDOMEventListeners();
 
-    // --- Initialize Ambient Canvas, Lockscreen, Mobile Navigation, and Cozy Rhodes Synthesizer ---
+    // --- Initialize Ambient Canvas, Lockscreen, and Mobile Navigation ---
     if (typeof killServiceWorkersAndCaches === 'function') killServiceWorkersAndCaches();
     if (typeof setupMediaSessionActions === 'function') setupMediaSessionActions();
     if (typeof initMobileNavigation === 'function') initMobileNavigation();
-    if (typeof initCozyRhodes === 'function') initCozyRhodes();
 
     // --- Resilient Auto-fallback timer ---
     // If YouTube doesn't load/fails within 2.5 seconds, lock HTML5 preview player.
@@ -2284,16 +2283,14 @@ function initMobileNavigation() {
         elNavTabs.forEach(t => t.classList.remove('active'));
         tab.classList.add('active');
         
-        const targetTab = tab.getAttribute('data-tab'); // 'lounge' | 'playlist' | 'vibe'
+        const targetTab = tab.getAttribute('data-tab'); // 'lounge' | 'playlist'
         
-        elLoungeGrid.classList.remove('view-lounge', 'view-playlist', 'view-vibe');
+        elLoungeGrid.classList.remove('view-lounge', 'view-playlist');
         
         if (targetTab === 'lounge') {
           elLoungeGrid.classList.add('view-lounge');
         } else if (targetTab === 'playlist') {
           elLoungeGrid.classList.add('view-playlist');
-        } else if (targetTab === 'vibe') {
-          elLoungeGrid.classList.add('view-vibe');
         }
         
         const tabTitle = tab.querySelector('span') ? tab.querySelector('span').textContent : targetTab;
@@ -2301,185 +2298,4 @@ function initMobileNavigation() {
       });
     });
   }
-}
-
-// --- 24. Cozy Rhodes Electric Piano Synthesizer Engine & Chord Manager ---
-let pianoAudioCtx = null;
-
-const JAZZ_CHORDS = {
-  'Cmaj7': [261.63, 329.63, 392.00, 493.88],
-  'Dm7': [293.66, 349.23, 440.00, 523.25],
-  'Em7': [329.63, 392.00, 493.88, 587.33],
-  'Fmaj7': [349.23, 440.00, 523.25, 659.25],
-  'G7': [392.00, 493.88, 587.33, 698.46]
-};
-
-function initPianoAudio() {
-  if (!pianoAudioCtx) {
-    pianoAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  if (pianoAudioCtx.state === 'suspended') {
-    pianoAudioCtx.resume();
-  }
-}
-
-function playRhodesNote(freq, duration = 1.2) {
-  try {
-    initPianoAudio();
-    if (!pianoAudioCtx) return;
-    
-    const now = pianoAudioCtx.currentTime;
-    
-    // Create oscillators
-    const osc1 = pianoAudioCtx.createOscillator(); // Fundamental Sine
-    const osc2 = pianoAudioCtx.createOscillator(); // Triangle Body Warmth
-    const osc3 = pianoAudioCtx.createOscillator(); // Sine Bell Chime (Tine)
-    
-    const gainNode = pianoAudioCtx.createGain();
-    const filter = pianoAudioCtx.createBiquadFilter();
-    
-    // Config types and freqs
-    osc1.type = 'sine';
-    osc1.frequency.setValueAtTime(freq, now);
-    
-    osc2.type = 'triangle';
-    osc2.frequency.setValueAtTime(freq, now);
-    
-    osc3.type = 'sine';
-    osc3.frequency.setValueAtTime(freq * 4, now); // classic 4th harmonic bell tine
-    
-    // Mix gains
-    const gain1 = pianoAudioCtx.createGain();
-    const gain2 = pianoAudioCtx.createGain();
-    const gain3 = pianoAudioCtx.createGain();
-    
-    gain1.gain.setValueAtTime(0.5, now);
-    gain2.gain.setValueAtTime(0.18, now);
-    
-    // Bell tine decays rapidly for classic pluck
-    gain3.gain.setValueAtTime(0.38, now);
-    gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
-    
-    // Master gain envelope
-    gainNode.gain.setValueAtTime(0.48, now);
-    gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
-    
-    // Filter settings (warm lowpass to remove harsh digital edge)
-    filter.type = 'lowpass';
-    filter.frequency.setValueAtTime(1400, now);
-    
-    // Connections
-    osc1.connect(gain1);
-    osc2.connect(gain2);
-    osc3.connect(gain3);
-    
-    gain1.connect(gainNode);
-    gain2.connect(gainNode);
-    gain3.connect(gainNode);
-    
-    gainNode.connect(filter);
-    filter.connect(pianoAudioCtx.destination);
-    
-    // Play
-    osc1.start(now);
-    osc2.start(now);
-    osc3.start(now);
-    
-    osc1.stop(now + duration);
-    osc2.stop(now + duration);
-    osc3.stop(now + duration);
-  } catch (err) {
-    console.warn("Rhodes synthesis failed:", err);
-  }
-}
-
-function playJazzChord(chordName) {
-  const freqs = JAZZ_CHORDS[chordName];
-  if (!freqs) return;
-  
-  // Play notes simultaneously
-  freqs.forEach(freq => {
-    playRhodesNote(freq, 1.5);
-  });
-  
-  // Highlight piano keyboard keys matching the notes played in chord
-  const keys = document.querySelectorAll('.piano-key');
-  keys.forEach(key => {
-    const keyFreq = parseFloat(key.getAttribute('data-freq'));
-    // Match frequency with tolerance
-    const isMatched = freqs.some(f => Math.abs(f - keyFreq) < 2);
-    if (isMatched) {
-      key.classList.add('active');
-      setTimeout(() => {
-        key.classList.remove('active');
-      }, 350);
-    }
-  });
-}
-
-function createKeyWave(element, text) {
-  const wavesContainer = document.getElementById('piano-waves');
-  if (!wavesContainer) return;
-  
-  const particle = document.createElement('span');
-  particle.className = 'piano-wave-note';
-  particle.textContent = text;
-  
-  // Calculate relative offset of key
-  const rect = element.getBoundingClientRect();
-  const parentRect = element.parentElement.getBoundingClientRect();
-  const relativeLeft = rect.left - parentRect.left + (rect.width / 2) - 10;
-  
-  particle.style.left = `${relativeLeft}px`;
-  
-  wavesContainer.appendChild(particle);
-  
-  setTimeout(() => {
-    particle.remove();
-  }, 1200);
-}
-
-function initCozyRhodes() {
-  const keyboard = document.getElementById('piano-keyboard');
-  if (!keyboard) return;
-  
-  const keys = keyboard.querySelectorAll('.piano-key');
-  
-  // Setup mouse and touch listeners for piano keys
-  keys.forEach(key => {
-    const note = key.getAttribute('data-note');
-    const freq = parseFloat(key.getAttribute('data-freq'));
-    
-    const triggerNotePlay = (e) => {
-      e.preventDefault();
-      key.classList.add('active');
-      playRhodesNote(freq);
-      createKeyWave(key, note + " 🎵");
-      
-      setTimeout(() => {
-        key.classList.remove('active');
-      }, 180);
-    };
-    
-    key.addEventListener('mousedown', triggerNotePlay);
-    key.addEventListener('touchstart', triggerNotePlay, { passive: false });
-  });
-  
-  // Setup quick jazz chord buttons
-  const chordBtns = document.querySelectorAll('.chord-btn');
-  chordBtns.forEach(btn => {
-    const chord = btn.getAttribute('data-chord');
-    
-    const triggerChordPlay = (e) => {
-      e.preventDefault();
-      playJazzChord(chord);
-      createKeyWave(btn, chord + " ☕");
-      showToast("Jazz Chord", `เล่นคอร์ดแสนอบอุ่น ${chord} คลอกับบรรยากาศ 🌙`);
-    };
-    
-    btn.addEventListener('mousedown', triggerChordPlay);
-    btn.addEventListener('touchstart', triggerChordPlay, { passive: false });
-  });
-  
-  console.log("Cozy Rhodes Keyboard initialized successfully.");
 }

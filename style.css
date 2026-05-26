@@ -321,7 +321,7 @@ body {
 
 .lounge-grid {
   display: grid;
-  grid-template-columns: 310px 1fr 310px;
+  grid-template-columns: 310px 1fr;
   gap: 24px;
   flex-grow: 1;
 }
@@ -333,11 +333,6 @@ body {
   min-height: 520px;
 }
 
-.lounge-sidebar-right {
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
 
 /* Widget Headings */
 .widget-title {
@@ -1491,14 +1486,11 @@ body {
 
 @media (max-width: 1200px) {
   .lounge-grid {
-    grid-template-columns: 260px 1fr 260px;
+    grid-template-columns: 260px 1fr;
     gap: 16px;
   }
   .lounge-sidebar-left {
     gap: 16px;
-  }
-  .lounge-sidebar-right {
-    grid-column: span 1;
   }
 }
 
@@ -1510,9 +1502,7 @@ body {
     grid-column: span 1;
     min-height: auto;
   }
-  .lounge-sidebar-right {
-    grid-column: span 1;
-  }
+
   .lounge-header {
     flex-direction: column;
     align-items: flex-start;
@@ -1671,174 +1661,7 @@ body {
    Romantic Pixel Art Parallax & Mobile Tab Bar Styling
    ========================================================================== */
 
-/* Piano Widget Styling */
-.piano-widget {
-  height: 100%;
-  min-height: 520px;
-  display: flex;
-  flex-direction: column;
-}
-
-.piano-body {
-  flex-grow: 1;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  margin-top: 15px;
-  position: relative;
-}
-
-.piano-desc {
-  font-size: 0.78rem;
-  color: var(--text-sub);
-  text-align: center;
-  margin-bottom: 12px;
-}
-
-.piano-keyboard {
-  display: flex;
-  position: relative;
-  height: 220px;
-  background: rgba(0, 0, 0, 0.25);
-  border-radius: 12px;
-  padding: 4px;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.5);
-}
-
-.piano-key {
-  position: relative;
-  cursor: pointer;
-  transition: all 0.1s ease;
-  user-select: none;
-}
-
-.white-key {
-  flex-grow: 1;
-  background: linear-gradient(to bottom, rgba(255, 255, 255, 0.9) 0%, rgba(240, 240, 240, 0.95) 80%, rgba(210, 210, 210, 0.95) 100%);
-  border: 1px solid #111;
-  border-bottom-left-radius: 6px;
-  border-bottom-right-radius: 6px;
-  height: 100%;
-  z-index: 1;
-  margin: 0 2px;
-  box-shadow: 
-    0 4px 6px rgba(0,0,0,0.3),
-    inset 0 2px 2px rgba(255,255,255,0.8);
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 12px;
-}
-
-.white-key span {
-  font-family: var(--font-sans);
-  font-size: 0.65rem;
-  font-weight: 700;
-  color: #555;
-  text-transform: uppercase;
-}
-
-.white-key:active, .white-key.active {
-  background: linear-gradient(to bottom, #ddd 0%, #bbb 100%);
-  transform: translateY(2px);
-  box-shadow: 
-    0 1px 2px rgba(0,0,0,0.5),
-    inset 0 3px 5px rgba(0,0,0,0.2);
-}
-
-.black-key {
-  width: 18px;
-  height: 130px;
-  background: linear-gradient(to bottom, #222 0%, #050505 100%);
-  border: 1px solid #000;
-  border-bottom-left-radius: 4px;
-  border-bottom-right-radius: 4px;
-  z-index: 2;
-  margin-left: -9px;
-  margin-right: -9px;
-  box-shadow: 
-    0 3px 5px rgba(0,0,0,0.5),
-    inset 0 1px 1px rgba(255,255,255,0.2);
-}
-
-.black-key:active, .black-key.active {
-  background: #333;
-  transform: translateY(2px);
-  box-shadow: 0 1px 2px rgba(0,0,0,0.5);
-}
-
-.chord-helper {
-  margin-top: 15px;
-  border-top: 1px solid rgba(255, 255, 255, 0.05);
-  padding-top: 15px;
-}
-
-.chord-title {
-  font-size: 0.72rem;
-  font-weight: 600;
-  color: var(--text-sub);
-  display: block;
-  margin-bottom: 8px;
-}
-
-.chord-btns {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.chord-btn {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  color: var(--text-main);
-  padding: 6px 12px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  border-radius: 20px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.chord-btn:hover {
-  background: rgba(var(--accent-rgb), 0.1);
-  border-color: rgba(var(--accent-rgb), 0.3);
-  color: var(--accent);
-}
-
-.chord-btn:active {
-  transform: translateY(1px);
-}
-
-.piano-waves {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100px;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.piano-wave-note {
-  position: absolute;
-  bottom: 0;
-  font-size: 0.9rem;
-  color: var(--accent);
-  text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.5);
-  animation: floatUpFade 1.2s ease-out forwards;
-}
-
-@keyframes floatUpFade {
-  0% {
-    transform: translateY(0) scale(0.8) rotate(0deg);
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-80px) scale(1.3) rotate(15deg);
-    opacity: 0;
-  }
-}
+/* Piano widget styles removed */
 
 /* Hide Mobile Nav by default on desktop */
 .mobile-nav-bar {
@@ -1928,7 +1751,7 @@ body {
   }
 
   /* Responsive screen switches (Mobile Views) */
-  #sidebar-left, #main-player, #sidebar-right {
+  #sidebar-left, #main-player {
     position: absolute;
     top: 0;
     left: 0;
@@ -1957,29 +1780,17 @@ body {
     z-index: 10;
   }
 
-  .lounge-grid.view-vibe #sidebar-right {
-    opacity: 1;
-    pointer-events: auto;
-    transform: translateX(0);
-    position: relative;
-    z-index: 10;
-  }
-
   /* Out of screen slide locations */
-  .lounge-grid.view-lounge #sidebar-left,
-  .lounge-grid.view-vibe #sidebar-left,
-  .lounge-grid.view-vibe #main-player {
+  .lounge-grid.view-lounge #sidebar-left {
     transform: translateX(-100%);
   }
 
-  .lounge-grid.view-lounge #sidebar-right,
-  .lounge-grid.view-playlist #sidebar-right,
   .lounge-grid.view-playlist #main-player {
     transform: translateX(100%);
   }
 
   /* Force sidebars to occupy 100% height when visible */
-  .lounge-sidebar-left, .lounge-sidebar-right, .lounge-main-player {
+  .lounge-sidebar-left, .lounge-main-player {
     grid-column: span 1 !important;
     height: 100% !important;
   }
@@ -1994,15 +1805,7 @@ body {
     max-height: calc(100vh - 350px) !important;
   }
 
-  .piano-widget {
-    min-height: 100% !important;
-    height: 100% !important;
-  }
 
-  .piano-body {
-    min-height: calc(100vh - 250px) !important;
-    height: calc(100vh - 250px) !important;
-  }
 
   .player-panel {
     padding: 15px 12px 12px 12px !important;
