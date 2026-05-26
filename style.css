@@ -1502,7 +1502,7 @@ body {
   }
 }
 
-@media (max-width: 850px) {
+@media (max-width: 1050px) {
   .lounge-grid {
     grid-template-columns: 1fr;
   }
@@ -1848,7 +1848,7 @@ body {
 /* ==========================================================================
    Mobile & Tablet Responsive Fluid Layout (Max Width: 850px)
    ========================================================================== */
-@media (max-width: 850px) {
+@media (max-width: 1050px) {
   .lounge-container {
     padding: 12px 12px 75px 12px; /* Pad bottom for mobile bar */
     gap: 16px;

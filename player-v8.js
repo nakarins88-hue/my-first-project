@@ -761,18 +761,6 @@ function playAudio() {
   // Pause any conflicting audio elements first
   if (elMainAudio) elMainAudio.pause();
   if (isYtReady && ytPlayer) ytPlayer.pauseVideo();
-
-  // Switch dynamically to Vibe tab on mobile when a song starts playing so user sees the animation!
-  const elLoungeGrid = document.querySelector('.lounge-grid');
-  const elNavTabs = document.querySelectorAll('.nav-tab');
-  if (elLoungeGrid && elNavTabs.length > 0 && window.innerWidth <= 850) {
-    elNavTabs.forEach(t => t.classList.remove('active'));
-    const vibeTab = Array.from(elNavTabs).find(t => t.getAttribute('data-tab') === 'vibe');
-    if (vibeTab) vibeTab.classList.add('active');
-    
-    elLoungeGrid.classList.remove('view-lounge', 'view-playlist', 'view-vibe');
-    elLoungeGrid.classList.add('view-vibe');
-  }
   
   if (currentEngine === 'local' && (currentTrack.localUrl || getLocalAudioUrl(currentTrack.trackName))) {
     const activeUrl = currentTrack.localUrl || getLocalAudioUrl(currentTrack.trackName);
@@ -790,6 +778,9 @@ function playAudio() {
         updatePlayerUIPlaying(true);
         triggerFloatingNotes();
         startProgressPolling();
+        if (typeof updateMediaSessionMetadata === 'function') {
+          updateMediaSessionMetadata(currentTrack);
+        }
       }).catch(e => {
         console.warn("Local audio playback failed, falling back to iTunes/YouTube:", e);
         // Autoplay policies or other failures fallback
@@ -814,6 +805,9 @@ function playAudio() {
     updatePlayerUIPlaying(true);
     triggerFloatingNotes();
     startProgressPolling();
+    if (typeof updateMediaSessionMetadata === 'function') {
+      updateMediaSessionMetadata(currentTrack);
+    }
   } else {
     console.log("Playing via HTML5 Audio Fallback Engine.");
     currentEngine = 'itunes';
@@ -831,10 +825,18 @@ function playAudio() {
         updatePlayerUIPlaying(true);
         triggerFloatingNotes();
         startProgressPolling();
+        if (typeof updateMediaSessionMetadata === 'function') {
+          updateMediaSessionMetadata(currentTrack);
+        }
       }).catch(e => {
         console.error("HTML5 Audio fallback failed to play:", e);
       });
     }
+  }
+
+  // Update native lock screen state
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.playbackState = 'playing';
   }
 }
 
@@ -847,6 +849,11 @@ function pauseAudio() {
     if (isYtReady && ytPlayer) ytPlayer.pauseVideo();
   } else {
     if (elMainAudio) elMainAudio.pause();
+  }
+
+  // Update native lock screen state
+  if ('mediaSession' in navigator) {
+    navigator.mediaSession.playbackState = 'paused';
   }
 }
 
