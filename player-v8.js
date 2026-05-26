@@ -133,6 +133,56 @@ try {
   favorites = [];
 }
 
+// Pre-populate tracks with all local files by default to ensure 100% offline & mobile reliability
+function initLocalTracks() {
+  tracks = LOCAL_FILE_NAMES.map((fileName, index) => {
+    const nameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
+    const cleanFile = nameWithoutExt.toLowerCase().replace(/[^a-z0-9]/g, '');
+    let collection = "The Gentleman Approach";
+    let artwork = "default_cover.png";
+    let year = "2012-12-07T08:00:00Z";
+    
+    if (cleanFile.includes("pillowtalk") || cleanFile.includes("coolgirls") || cleanFile.includes("modernrenaissance")) {
+      collection = "Modern Renaissance";
+      artwork = "cover_renaissance.png";
+      year = "2013-12-15T08:00:00Z";
+    } else if (cleanFile.includes("changes") || cleanFile.includes("shelovesmenot")) {
+      collection = "She Loves Me Not";
+      artwork = "cover_shelovesmenot.png";
+      year = "2019-05-10T08:00:00Z";
+    } else if (cleanFile.includes("still") || cleanFile.includes("cruisin") || cleanFile.includes("meantime")) {
+      collection = "In the Meantime";
+      artwork = "cover_meantime.png";
+      year = "2016-01-16T08:00:00Z";
+    }
+    
+    return {
+      trackId: 'local_' + cleanFile,
+      trackName: nameWithoutExt,
+      collectionName: collection,
+      artworkUrl100: artwork,
+      previewUrl: `music/${encodeURIComponent(fileName)}`,
+      localUrl: `music/${encodeURIComponent(fileName)}`,
+      releaseDate: year,
+      primaryGenreName: "R&B/Soul",
+      trackViewUrl: "https://music.apple.com/us/artist/jeff-bernat/487317660"
+    };
+  }).filter(t => {
+    const clean = t.trackName.toLowerCase();
+    return !clean.includes('sped up') &&
+           !clean.includes('acoustic') &&
+           !clean.includes('inst.') &&
+           !clean.includes('inst)') &&
+           !clean.includes('instrumental') &&
+           !clean.includes('intro') &&
+           !clean.includes('interlude') &&
+           !clean.includes('accapella') &&
+           !clean.includes('remix') &&
+           !clean.includes('mix');
+  });
+}
+initLocalTracks();
+
 // Dynamic local cover matcher & string-hash rotator
 function getLocalCoverUrl(trackName, albumName) {
   const cleanTrack = (trackName || "").toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -1082,11 +1132,11 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Bind Event Listeners defensively ---
     setupDOMEventListeners();
 
-    // --- Initialize PWA, Lockscreen, Mobile Navigation, and Pixel Art Parallax ---
-    if (typeof registerServiceWorker === 'function') registerServiceWorker();
+    // --- Initialize Ambient Canvas, Lockscreen, Mobile Navigation, and Cozy Rhodes Synthesizer ---
+    if (typeof killServiceWorkersAndCaches === 'function') killServiceWorkersAndCaches();
     if (typeof setupMediaSessionActions === 'function') setupMediaSessionActions();
     if (typeof initMobileNavigation === 'function') initMobileNavigation();
-    if (typeof initPixelVibe === 'function') initPixelVibe();
+    if (typeof initCozyRhodes === 'function') initCozyRhodes();
 
     // --- Resilient Auto-fallback timer ---
     // If YouTube doesn't load/fails within 2.5 seconds, lock HTML5 preview player.
@@ -2093,17 +2143,32 @@ function drawPlayerVisualizer() {
 // PWA, Media Session, Mobile Navigation, and Cozy Pixel Parallax Engine
 // ==========================================================================
 
-// --- 21. Progressive Web App (PWA) Service Worker Registration ---
-function registerServiceWorker() {
+// --- 21. Progressive Web App (PWA) Self-Destruct Routine (Clears mobile cached standalone states) ---
+function killServiceWorkersAndCaches() {
   if ('serviceWorker' in navigator) {
-    // Relative registration for subdirectory safety (e.g. /my-first-project/)
-    navigator.serviceWorker.register('./service-worker.js')
-      .then(reg => {
-        console.log('Service Worker: Registered successfully with scope:', reg.scope);
-        // Force update checking immediately on page load to bust stale SW caches
-        reg.update();
-      })
-      .catch(err => console.log('Service Worker: Registration failed:', err));
+    navigator.serviceWorker.getRegistrations().then(registrations => {
+      for (let registration of registrations) {
+        registration.unregister().then(success => {
+          if (success) {
+            console.log("Cozy Player: Unregistered active service worker successfully.");
+          }
+        });
+      }
+    }).catch(err => {
+      console.warn("Error unregistering service workers:", err);
+    });
+  }
+  
+  if ('caches' in window) {
+    caches.keys().then(keys => {
+      keys.forEach(key => {
+        caches.delete(key).then(() => {
+          console.log("Cozy Player: Deleted stale client cache:", key);
+        });
+      });
+    }).catch(err => {
+      console.warn("Error clearing caches:", err);
+    });
   }
 }
 
@@ -2185,372 +2250,183 @@ function initMobileNavigation() {
   }
 }
 
-// --- 24. Cozy Romantic Pixel Art Parallax Engine ---
-let pixelCanvas = null;
-let pixelCtx = null;
-let pixelTime = 0;
-let bgOffset = 0;
-let midOffset = 0;
-let foreOffset = 0;
-let pixelStars = [];
-let pixelBuildings = [];
-let heartBeats = 0;
-let heartScale = 1;
+// --- 24. Cozy Rhodes Electric Piano Synthesizer Engine & Chord Manager ---
+let pianoAudioCtx = null;
 
-function initPixelVibe() {
-  pixelCanvas = document.getElementById('pixel-animation-canvas');
-  if (!pixelCanvas) return;
-  
-  pixelCtx = pixelCanvas.getContext('2d');
-  
-  // Set fixed retro virtual resolution
-  pixelCanvas.width = 320;
-  pixelCanvas.height = 240;
-  
-  // Generate random twinkling stars
-  pixelStars = [];
-  for (let i = 0; i < 40; i++) {
-    pixelStars.push({
-      x: Math.random() * 320,
-      y: Math.random() * 110,
-      blinkSpeed: 0.02 + Math.random() * 0.05,
-      phase: Math.random() * Math.PI * 2,
-      size: Math.random() > 0.8 ? 2 : 1
-    });
+const JAZZ_CHORDS = {
+  'Cmaj7': [261.63, 329.63, 392.00, 493.88],
+  'Dm7': [293.66, 349.23, 440.00, 523.25],
+  'Em7': [329.63, 392.00, 493.88, 587.33],
+  'Fmaj7': [349.23, 440.00, 523.25, 659.25],
+  'G7': [392.00, 493.88, 587.33, 698.46]
+};
+
+function initPianoAudio() {
+  if (!pianoAudioCtx) {
+    pianoAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
   }
-  
-  // Generate background building layers
-  pixelBuildings = [];
-  let currentX = 0;
-  while (currentX < 640) {
-    const bWidth = 40 + Math.random() * 50;
-    const bHeight = 60 + Math.random() * 60;
-    pixelBuildings.push({
-      x: currentX,
-      width: bWidth,
-      height: bHeight,
-      windows: generateWindowGrid(bWidth, bHeight)
-    });
-    currentX += bWidth - 5; // Slight overlap
+  if (pianoAudioCtx.state === 'suspended') {
+    pianoAudioCtx.resume();
   }
-  
-  // Start loop
-  animatePixelVibe();
 }
 
-function generateWindowGrid(bWidth, bHeight) {
-  const list = [];
-  const cols = Math.floor(bWidth / 12);
-  const rows = Math.floor(bHeight / 16);
-  
-  for (let c = 1; c < cols; c++) {
-    for (let r = 1; r < rows; r++) {
-      if (Math.random() > 0.65) {
-        list.push({
-          dx: c * 12,
-          dy: r * 16,
-          lit: Math.random() > 0.3,
-          flickerRate: 0.005 + Math.random() * 0.02,
-          phase: Math.random() * Math.PI
-        });
-      }
-    }
+function playRhodesNote(freq, duration = 1.2) {
+  try {
+    initPianoAudio();
+    if (!pianoAudioCtx) return;
+    
+    const now = pianoAudioCtx.currentTime;
+    
+    // Create oscillators
+    const osc1 = pianoAudioCtx.createOscillator(); // Fundamental Sine
+    const osc2 = pianoAudioCtx.createOscillator(); // Triangle Body Warmth
+    const osc3 = pianoAudioCtx.createOscillator(); // Sine Bell Chime (Tine)
+    
+    const gainNode = pianoAudioCtx.createGain();
+    const filter = pianoAudioCtx.createBiquadFilter();
+    
+    // Config types and freqs
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(freq, now);
+    
+    osc2.type = 'triangle';
+    osc2.frequency.setValueAtTime(freq, now);
+    
+    osc3.type = 'sine';
+    osc3.frequency.setValueAtTime(freq * 4, now); // classic 4th harmonic bell tine
+    
+    // Mix gains
+    const gain1 = pianoAudioCtx.createGain();
+    const gain2 = pianoAudioCtx.createGain();
+    const gain3 = pianoAudioCtx.createGain();
+    
+    gain1.gain.setValueAtTime(0.5, now);
+    gain2.gain.setValueAtTime(0.18, now);
+    
+    // Bell tine decays rapidly for classic pluck
+    gain3.gain.setValueAtTime(0.38, now);
+    gain3.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+    
+    // Master gain envelope
+    gainNode.gain.setValueAtTime(0.48, now);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, now + duration);
+    
+    // Filter settings (warm lowpass to remove harsh digital edge)
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(1400, now);
+    
+    // Connections
+    osc1.connect(gain1);
+    osc2.connect(gain2);
+    osc3.connect(gain3);
+    
+    gain1.connect(gainNode);
+    gain2.connect(gainNode);
+    gain3.connect(gainNode);
+    
+    gainNode.connect(filter);
+    filter.connect(pianoAudioCtx.destination);
+    
+    // Play
+    osc1.start(now);
+    osc2.start(now);
+    osc3.start(now);
+    
+    osc1.stop(now + duration);
+    osc2.stop(now + duration);
+    osc3.stop(now + duration);
+  } catch (err) {
+    console.warn("Rhodes synthesis failed:", err);
   }
-  return list;
 }
 
-function animatePixelVibe() {
-  if (!pixelCanvas || !pixelCtx) return;
+function playJazzChord(chordName) {
+  const freqs = JAZZ_CHORDS[chordName];
+  if (!freqs) return;
   
-  drawPixelVibe();
-  
-  pixelTime += 1;
-  requestAnimationFrame(animatePixelVibe);
-}
-
-function drawPixelVibe() {
-  const ctx = pixelCtx;
-  const w = 320;
-  const h = 240;
-  const groundY = 195;
-  
-  // Update speeds linked to isPlaying
-  const speedMultiplier = isPlaying ? 1.0 : 0.0;
-  bgOffset = (bgOffset + 0.12 * speedMultiplier) % 320;
-  midOffset = (midOffset + 0.65 * speedMultiplier) % 640;
-  foreOffset = (foreOffset + 1.35 * speedMultiplier) % 320;
-  
-  // 1. Draw Sky Gradient (Midnight Deep Indigo)
-  const skyGrad = ctx.createLinearGradient(0, 0, 0, groundY);
-  skyGrad.addColorStop(0, '#040712');
-  skyGrad.addColorStop(0.5, '#0c1020');
-  skyGrad.addColorStop(1, '#1b1d30');
-  ctx.fillStyle = skyGrad;
-  ctx.fillRect(0, 0, w, groundY);
-  
-  // 2. Draw Stars (Twinkling)
-  pixelStars.forEach(star => {
-    const starOpacity = 0.3 + 0.7 * Math.abs(Math.sin(pixelTime * star.blinkSpeed + star.phase));
-    ctx.fillStyle = `rgba(255, 255, 255, ${starOpacity})`;
-    ctx.fillRect(star.x, star.y, star.size, star.size);
+  // Play notes simultaneously
+  freqs.forEach(freq => {
+    playRhodesNote(freq, 1.5);
   });
   
-  // 3. Draw Pixel crescent Moon
-  ctx.fillStyle = '#fffae0';
-  ctx.shadowColor = '#fef08a';
-  ctx.beginPath();
-  ctx.arc(45, 40, 10, 0, Math.PI * 2);
-  ctx.fill();
-  
-  // Subtract overlap for crescent cut
-  ctx.fillStyle = '#040712'; // match background sky top color
-  ctx.beginPath();
-  ctx.arc(39, 36, 10, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.shadowBlur = 0; // reset shadow
-  
-  // 4. Draw Background Buildings Silhouette (Slow Parallax)
-  ctx.fillStyle = '#101424';
-  pixelBuildings.forEach(b => {
-    let bx = b.x - bgOffset;
-    if (bx + b.width < 0) {
-      b.x += 640;
-      bx = b.x - bgOffset;
+  // Highlight piano keyboard keys matching the notes played in chord
+  const keys = document.querySelectorAll('.piano-key');
+  keys.forEach(key => {
+    const keyFreq = parseFloat(key.getAttribute('data-freq'));
+    // Match frequency with tolerance
+    const isMatched = freqs.some(f => Math.abs(f - keyFreq) < 2);
+    if (isMatched) {
+      key.classList.add('active');
+      setTimeout(() => {
+        key.classList.remove('active');
+      }, 350);
     }
+  });
+}
+
+function createKeyWave(element, text) {
+  const wavesContainer = document.getElementById('piano-waves');
+  if (!wavesContainer) return;
+  
+  const particle = document.createElement('span');
+  particle.className = 'piano-wave-note';
+  particle.textContent = text;
+  
+  // Calculate relative offset of key
+  const rect = element.getBoundingClientRect();
+  const parentRect = element.parentElement.getBoundingClientRect();
+  const relativeLeft = rect.left - parentRect.left + (rect.width / 2) - 10;
+  
+  particle.style.left = `${relativeLeft}px`;
+  
+  wavesContainer.appendChild(particle);
+  
+  setTimeout(() => {
+    particle.remove();
+  }, 1200);
+}
+
+function initCozyRhodes() {
+  const keyboard = document.getElementById('piano-keyboard');
+  if (!keyboard) return;
+  
+  const keys = keyboard.querySelectorAll('.piano-key');
+  
+  // Setup mouse and touch listeners for piano keys
+  keys.forEach(key => {
+    const note = key.getAttribute('data-note');
+    const freq = parseFloat(key.getAttribute('data-freq'));
     
-    ctx.fillRect(bx, groundY - b.height, b.width, b.height);
+    const triggerNotePlay = (e) => {
+      e.preventDefault();
+      key.classList.add('active');
+      playRhodesNote(freq);
+      createKeyWave(key, note + " 🎵");
+      
+      setTimeout(() => {
+        key.classList.remove('active');
+      }, 180);
+    };
     
-    b.windows.forEach(w => {
-      const isLit = w.lit && (Math.sin(pixelTime * w.flickerRate + w.phase) > -0.7);
-      if (isLit) {
-        ctx.fillStyle = '#eab308'; // Warm amber window
-        ctx.fillRect(bx + w.dx, groundY - b.height + w.dy, 4, 6);
-      }
-    });
-    ctx.fillStyle = '#101424'; // Reset fill for next building
+    key.addEventListener('mousedown', triggerNotePlay);
+    key.addEventListener('touchstart', triggerNotePlay, { passive: false });
   });
   
-  // 5. Draw Midground Elements (Mid Parallax)
-  let cafeX = 180 - midOffset;
-  if (cafeX + 110 < 0) cafeX += 640;
-  
-  // Cafe wood frame
-  ctx.fillStyle = '#1e1b18';
-  ctx.fillRect(cafeX, groundY - 45, 110, 45);
-  // Cafe glowing glass window
-  ctx.fillStyle = '#b45309';
-  ctx.fillRect(cafeX + 12, groundY - 33, 50, 24);
-  ctx.fillStyle = '#eab308';
-  ctx.fillRect(cafeX + 15, groundY - 30, 44, 20);
-  
-  // Inside Cafe silhouette couple
-  ctx.fillStyle = '#1e1b18';
-  ctx.fillRect(cafeX + 22, groundY - 18, 6, 8); // left head/shoulders
-  ctx.fillRect(cafeX + 48, groundY - 16, 6, 6); // right head
-  ctx.fillStyle = '#b45309';
-  ctx.fillRect(cafeX + 32, groundY - 16, 8, 2);  // table top
-  
-  // Cozy Café Signboard
-  ctx.fillStyle = '#78350f';
-  ctx.fillRect(cafeX + 20, groundY - 41, 70, 7);
-  ctx.fillStyle = '#fef08a';
-  ctx.fillRect(cafeX + 25, groundY - 39, 3, 3);
-  ctx.fillRect(cafeX + 33, groundY - 39, 4, 3);
-  ctx.fillRect(cafeX + 42, groundY - 39, 5, 3);
-  
-  // Cafe awning
-  ctx.fillStyle = '#991b1b';
-  ctx.fillRect(cafeX - 5, groundY - 47, 120, 4);
-  
-  // Lamppost every 200px
-  for (let i = 0; i < 4; i++) {
-    let lx = (i * 200) - midOffset;
-    if (lx < -30) lx += 800;
+  // Setup quick jazz chord buttons
+  const chordBtns = document.querySelectorAll('.chord-btn');
+  chordBtns.forEach(btn => {
+    const chord = btn.getAttribute('data-chord');
     
-    ctx.fillStyle = '#334155';
-    ctx.fillRect(lx, groundY - 60, 3, 60);
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(lx - 2, groundY - 64, 7, 4);
-    ctx.fillStyle = '#fef08a';
-    ctx.fillRect(lx - 1, groundY - 62, 5, 2);
+    const triggerChordPlay = (e) => {
+      e.preventDefault();
+      playJazzChord(chord);
+      createKeyWave(btn, chord + " ☕");
+      showToast("Jazz Chord", `เล่นคอร์ดแสนอบอุ่น ${chord} คลอกับบรรยากาศ 🌙`);
+    };
     
-    // Cone of Light
-    const coneGrad = ctx.createLinearGradient(lx, groundY - 60, lx, groundY);
-    coneGrad.addColorStop(0, 'rgba(253, 224, 71, 0.22)');
-    coneGrad.addColorStop(1, 'rgba(253, 224, 71, 0.0)');
-    ctx.fillStyle = coneGrad;
-    ctx.beginPath();
-    ctx.moveTo(lx - 1, groundY - 60);
-    ctx.lineTo(lx - 28, groundY);
-    ctx.lineTo(lx + 31, groundY);
-    ctx.closePath();
-    ctx.fill();
-    
-    // Floor reflection
-    ctx.fillStyle = 'rgba(253, 224, 71, 0.12)';
-    ctx.fillRect(lx - 20, groundY, 40, 2);
-  }
+    btn.addEventListener('mousedown', triggerChordPlay);
+    btn.addEventListener('touchstart', triggerChordPlay, { passive: false });
+  });
   
-  // 6. Draw Pavement (Ground Floor)
-  ctx.fillStyle = '#0b0f19';
-  ctx.fillRect(0, groundY, w, h - groundY);
-  ctx.fillStyle = '#181f33';
-  ctx.fillRect(0, groundY, w, 2); // curb line
-  
-  // 7. Draw Weather/Mood Particles
-  if (theme === 'rain') {
-    ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
-    ctx.lineWidth = 1.0;
-    for (let i = 0; i < 15; i++) {
-      const rx = (i * 35 + pixelTime * 3.5) % w;
-      const ry = (i * 45 + pixelTime * 11) % groundY;
-      ctx.beginPath();
-      ctx.moveTo(rx, ry);
-      ctx.lineTo(rx - 3, ry + 12);
-      ctx.stroke();
-    }
-  } else if (theme === 'cafe') {
-    ctx.fillStyle = 'rgba(251, 191, 36, 0.25)';
-    for (let i = 0; i < 8; i++) {
-      const bubbleX = (i * 50 + Math.sin(pixelTime * 0.02 + i) * 15) % w;
-      const bubbleY = groundY - 20 - ((i * 30 + pixelTime * 0.6) % 120);
-      ctx.beginPath();
-      ctx.arc(bubbleX, bubbleY, 2 + (i % 2), 0, Math.PI * 2);
-      ctx.fill();
-    }
-  } else if (theme === 'study') {
-    for (let i = 0; i < 10; i++) {
-      const emberX = (i * 42 + Math.sin(pixelTime * 0.04 + i) * 10) % w;
-      const emberY = groundY - 10 - ((i * 25 + pixelTime * 0.8) % 150);
-      const emberSize = 1.5 + (i % 2);
-      ctx.fillStyle = `rgba(249, 115, 22, ${0.15 + (i % 5) * 0.12})`;
-      ctx.fillRect(emberX, emberY, emberSize, emberSize);
-    }
-  }
-  
-  // 8. The Romantic Couple holding hands
-  const centerX = 160;
-  const isWalking = isPlaying;
-  
-  let yBob = 0;
-  if (isWalking) {
-    yBob = Math.abs(Math.sin(pixelTime * 0.14)) * 3.2;
-  } else {
-    yBob = Math.sin(pixelTime * 0.045) * 0.8;
-  }
-  
-  const boyX = centerX - 25;
-  const girlX = centerX + 10;
-  const handY = groundY - 14 - yBob;
-  
-  ctx.lineWidth = 2.0;
-  ctx.strokeStyle = '#206370'; // Teal Boy arm
-  ctx.beginPath();
-  ctx.moveTo(boyX + 5, groundY - 18 - yBob);
-  ctx.lineTo(centerX - 2, handY);
-  ctx.stroke();
-  
-  ctx.strokeStyle = '#9b4450'; // Pink Girl arm
-  ctx.beginPath();
-  ctx.moveTo(girlX + 2, groundY - 17 - yBob);
-  ctx.lineTo(centerX + 2, handY);
-  ctx.stroke();
-  
-  ctx.fillStyle = '#ffdbb5';
-  ctx.fillRect(centerX - 2, handY - 1, 4, 3);
-  
-  drawBoy(ctx, boyX, groundY - yBob, isWalking, pixelTime);
-  drawGirl(ctx, girlX, groundY - yBob, isWalking, pixelTime);
-  
-  // 9. Floating Love Heart above their heads
-  if (isWalking) {
-    heartScale = 0.95 + Math.sin(pixelTime * 0.1) * 0.12;
-  } else {
-    heartScale = 1.0;
-  }
-  
-  drawFloatingHeart(ctx, centerX, groundY - 45 - yBob, heartScale);
-}
-
-function drawFloatingHeart(ctx, x, y, scale) {
-  ctx.fillStyle = '#ef4444';
-  const hSize = Math.round(4 * scale);
-  if (hSize <= 0) return;
-  
-  ctx.fillRect(x - 3, y - 3, 2, 2);
-  ctx.fillRect(x + 1, y - 3, 2, 2);
-  ctx.fillRect(x - 4, y - 1, 8, 2);
-  ctx.fillRect(x - 3, y + 1, 6, 1);
-  ctx.fillRect(x - 2, y + 2, 4, 1);
-  ctx.fillRect(x - 1, y + 3, 2, 1);
-}
-
-function drawBoy(ctx, x, y, isWalking, time) {
-  ctx.fillStyle = '#2b231d';
-  ctx.fillRect(x - 2, y - 27, 8, 5);
-  ctx.fillRect(x - 3, y - 25, 3, 3);
-  
-  ctx.fillStyle = '#ffdbb5';
-  ctx.fillRect(x - 1, y - 23, 6, 6);
-  
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(x + 3, y - 21, 1, 2);
-  
-  ctx.fillStyle = '#206370';
-  ctx.fillRect(x - 3, y - 17, 8, 10);
-  ctx.fillStyle = '#164e58';
-  ctx.fillRect(x - 3, y - 17, 2, 10);
-  
-  ctx.fillStyle = '#3c405b';
-  let legL_Offset = 0;
-  let legR_Offset = 0;
-  if (isWalking) {
-    legL_Offset = Math.sin(time * 0.15) * 3;
-    legR_Offset = -Math.sin(time * 0.15) * 3;
-  }
-  
-  ctx.fillRect(x - 2 + legL_Offset, y - 7, 2, 7);
-  ctx.fillRect(x + 2 + legR_Offset, y - 7, 2, 7);
-  
-  ctx.fillStyle = '#111827';
-  ctx.fillRect(x - 2 + legL_Offset, y - 1, 3, 2);
-  ctx.fillRect(x + 2 + legR_Offset, y - 1, 3, 2);
-}
-
-function drawGirl(ctx, x, y, isWalking, time) {
-  ctx.fillStyle = '#703a2b';
-  ctx.fillRect(x + 1, y - 26, 7, 6);
-  ctx.fillRect(x + 4, y - 24, 4, 11);
-  
-  ctx.fillStyle = '#ffdbb5';
-  ctx.fillRect(x, y - 22, 6, 6);
-  
-  ctx.fillStyle = '#000000';
-  ctx.fillRect(x + 1, y - 20, 1, 2);
-  
-  ctx.fillStyle = '#f87171';
-  ctx.fillRect(x + 2, y - 18, 1, 1);
-  
-  ctx.fillStyle = '#9b4450';
-  ctx.fillRect(x - 1, y - 16, 7, 10);
-  ctx.fillStyle = '#b91c1c';
-  ctx.fillRect(x + 4, y - 16, 2, 10);
-  
-  ctx.fillStyle = '#f59e0b';
-  ctx.fillRect(x - 1, y - 6, 7, 1);
-  
-  ctx.fillStyle = '#ffdbb5';
-  let legL_Offset = 0;
-  let legR_Offset = 0;
-  if (isWalking) {
-    legL_Offset = -Math.sin(time * 0.15) * 3;
-    legR_Offset = Math.sin(time * 0.15) * 3;
-  }
-  
-  ctx.fillRect(x + legL_Offset, y - 5, 2, 5);
-  ctx.fillRect(x + 3 + legR_Offset, y - 5, 2, 5);
-  
-  ctx.fillStyle = '#111827';
-  ctx.fillRect(x - 1 + legL_Offset, y - 1, 3, 2);
-  ctx.fillRect(x + 2 + legR_Offset, y - 1, 3, 2);
+  console.log("Cozy Rhodes Keyboard initialized successfully.");
 }
