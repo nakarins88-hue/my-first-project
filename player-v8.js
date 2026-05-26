@@ -1170,6 +1170,52 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // --- 13. UI Event Bindings with Null Safety ---
 function setupDOMEventListeners() {
+  // HTML5 Audio Event Listeners for smooth cross-device playback and seek bar sync
+  if (elMainAudio) {
+    elMainAudio.addEventListener('loadedmetadata', () => {
+      console.log("Audio metadata loaded. Duration:", elMainAudio.duration);
+      if ((currentEngine === 'local' || currentEngine === 'itunes') && elMainAudio.duration) {
+        if (elTotalDurationDisplay) {
+          elTotalDurationDisplay.textContent = formatTime(elMainAudio.duration);
+        }
+      }
+    });
+
+    elMainAudio.addEventListener('durationchange', () => {
+      console.log("Audio duration change. Duration:", elMainAudio.duration);
+      if ((currentEngine === 'local' || currentEngine === 'itunes') && elMainAudio.duration) {
+        if (elTotalDurationDisplay) {
+          elTotalDurationDisplay.textContent = formatTime(elMainAudio.duration);
+        }
+      }
+    });
+
+    elMainAudio.addEventListener('timeupdate', () => {
+      if (currentEngine === 'local' || currentEngine === 'itunes') {
+        const currentTime = elMainAudio.currentTime;
+        const duration = elMainAudio.duration || 30;
+        
+        if (duration > 0) {
+          const progressPercent = (currentTime / duration) * 100;
+          if (elProgressFill) elProgressFill.style.width = `${progressPercent}%`;
+          if (elCurrentTimeDisplay) elCurrentTimeDisplay.textContent = formatTime(currentTime);
+          if (elTotalDurationDisplay && elMainAudio.duration) {
+            elTotalDurationDisplay.textContent = formatTime(duration);
+          }
+          syncLyricsHighlight(currentTime);
+        }
+      }
+    });
+
+    elMainAudio.addEventListener('ended', () => {
+      console.log("Audio track ended. Advancing to next track.");
+      nextTrack();
+      if (isPlaying) {
+        setTimeout(playAudio, 300);
+      }
+    });
+  }
+
   if (elPlayBtn) {
     elPlayBtn.addEventListener('click', () => {
       if (isPlaying) pauseAudio();
