@@ -1,53 +1,31 @@
-const CACHE_NAME = 'jeff-bernat-lounge-v8';
-const ASSETS = [
-  './',
-  './index.html',
-  './style.css',
-  './player-v8.js',
-  './manifest.json',
-  './default_cover.png',
-  './cover_renaissance.png',
-  './cover_meantime.png',
-  './cover_shelovesmenot.png',
-  './cover_singles.png'
-];
-
-// Install Event
+// Service Worker Self-Destruct Script (Clean-sweeps all PWA caches and forces live reloading)
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE_NAME).then(cache => {
-      console.log('Service Worker: Caching core assets');
-      return cache.addAll(ASSETS);
-    }).then(() => self.skipWaiting())
-  );
+  console.log('Uninstalling service worker: skip waiting');
+  self.skipWaiting();
 });
 
-// Activate Event
 self.addEventListener('activate', e => {
+  console.log('Uninstalling service worker: unregistering and clearing caches');
   e.waitUntil(
     caches.keys().then(keys => {
-      return Promise.all(
-        keys.map(key => {
-          if (key !== CACHE_NAME) {
-            console.log('Service Worker: Clearing old cache', key);
-            return caches.delete(key);
-          }
-        })
-      );
+      return Promise.all(keys.map(key => caches.delete(key)));
+    }).then(() => {
+      return self.registration.unregister();
+    }).then(() => {
+      console.log('Service Worker successfully uninstalled.');
+      return self.clients.matchAll();
+    }).then(clients => {
+      clients.forEach(client => {
+        if (client.url) {
+          console.log('Reloading client:', client.url);
+          client.navigate(client.url);
+        }
+      });
     })
   );
 });
 
-// Fetch Event (Network-First Fallback-to-Cache Strategy for high resilience)
+// Resilient bypass fetch handler during uninstallation transition
 self.addEventListener('fetch', e => {
-  // Skip caching for external APIs or media streams (to prevent range-request CORS exceptions in Safari/Chrome)
-  if (e.request.url.includes('itunes.apple.com') || e.request.url.includes('/music/') || e.request.url.includes('youtube.com')) {
-    return;
-  }
-  
-  e.respondWith(
-    fetch(e.request).catch(() => {
-      return caches.match(e.request);
-    })
-  );
+  e.respondWith(fetch(e.request));
 });
