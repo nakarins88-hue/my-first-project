@@ -1174,28 +1174,32 @@ function setupDOMEventListeners() {
 
   if (elSongSearch) elSongSearch.addEventListener('input', renderLibrary);
   
-  elLibTabs.forEach(tab => {
-    tab.addEventListener('click', () => {
-      elLibTabs.forEach(t => t.classList.remove('active'));
-      tab.classList.add('active');
-      currentFilter = tab.getAttribute('data-filter');
-      renderLibrary();
+  if (elLibTabs) {
+    elLibTabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        elLibTabs.forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        currentFilter = tab.getAttribute('data-filter');
+        renderLibrary();
+      });
     });
-  });
+  }
 
-  elMoodBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const targetTheme = btn.getAttribute('data-theme');
-      changeMoodTheme(targetTheme);
-      const span = btn.querySelector('span');
-      showToast(
-        `Mood: ${span ? span.textContent : targetTheme}`,
-        targetTheme === 'rain' ? 'เปลี่ยนบรรยากาศฝนตกรอบคาเฟ่ 🌧️' : 
-        targetTheme === 'cafe' ? 'เปลี่ยนบรรยากาศเสียงกระซิบเบา ๆ ในร้านกาแฟ ☕' : 
-        'เปลี่ยนบรรยากาศเตาผิงอุ่น ๆ ในห้องทำงานย้อนยุค 🔥'
-      );
+  if (elMoodBtns) {
+    elMoodBtns.forEach(btn => {
+      btn.addEventListener('click', () => {
+        const targetTheme = btn.getAttribute('data-theme');
+        changeMoodTheme(targetTheme);
+        const span = btn.querySelector('span');
+        showToast(
+          `Mood: ${span ? span.textContent : targetTheme}`,
+          targetTheme === 'rain' ? 'เปลี่ยนบรรยากาศฝนตกรอบคาเฟ่ 🌧️' : 
+          targetTheme === 'cafe' ? 'เปลี่ยนบรรยากาศเสียงกระซิบเบา ๆ ในร้านกาแฟ ☕' : 
+          'เปลี่ยนบรรยากาศเตาผิงอุ่น ๆ ในห้องทำงานย้อนยุค 🔥'
+        );
+      });
     });
-  });
+  }
 
   // Ambient sound mixers
   document.querySelectorAll('.ambient-channel').forEach(channel => {
