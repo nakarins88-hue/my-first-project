@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jeff Bernat Cozy Music Lounge 🌙</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,400;0,600;0,700;1,400&display=swap" rel="stylesheet">
+  <!-- FontAwesome for Premium Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Core Stylesheet -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="theme-rain">
+  <!-- Background Canvas for Particles/Rain/Embers -->
+  <canvas id="ambient-canvas"></canvas>
+  <div class="ambient-glow"></div>
+
+  <!-- Background Music Note Particles -->
+  <div class="floating-notes" id="floating-notes"></div>
+
+  <!-- Main Container -->
+  <main class="lounge-container">
+    
+    <!-- Top Header -->
+    <header class="lounge-header">
+      <div class="brand">
+        <span class="brand-subtitle">R&B / Soul Session</span>
+        <h1 class="brand-title">Jeff Bernat <span class="accent-text">Cozy Lounge</span></h1>
+      </div>
+      
+      <!-- Theme Switcher Header Component -->
+      <div class="mood-switcher-bar">
+        <button class="mood-btn active" data-theme="rain" title="Late Night Rain">
+          <i class="fa-solid fa-cloud-showers-heavy"></i> <span>Late Night Rain</span>
+        </button>
+        <button class="mood-btn" data-theme="cafe" title="Cozy Café">
+          <i class="fa-solid fa-mug-hot"></i> <span>Cozy Café</span>
+        </button>
+        <button class="mood-btn" data-theme="study" title="Vintage Fireplace">
+          <i class="fa-solid fa-fire"></i> <span>Vintage Study</span>
+        </button>
+      </div>
+
+      <!-- Quick Search -->
+      <div class="search-wrapper">
+        <i class="fa-solid fa-magnifying-glass search-icon"></i>
+        <input type="text" id="song-search" placeholder="ค้นหาเพลงของ Jeff Bernat...">
+      </div>
+    </header>
+
+    <!-- Content Grid Layout -->
+    <div class="lounge-grid">
+      
+      <!-- Left Column: Ambient Mixer & Favorite Playlist -->
+      <aside class="lounge-sidebar-left">
+        <!-- Ambient Sound Mixer Widget -->
+        <section class="glass-panel widget mixer-widget">
+          <h2 class="widget-title"><i class="fa-solid fa-sliders"></i> Ambient Sound Mixer</h2>
+          <p class="widget-subtitle">ผสมผสานเสียงบรรยากาศคลอไปกับเสียงเพลง</p>
+          
+          <div class="mixer-controls">
+            <!-- Rain Slider -->
+            <div class="ambient-channel" data-sound="rain">
+              <div class="channel-info">
+                <span class="channel-name"><i class="fa-solid fa-cloud-rain"></i> Rain on Window</span>
+                <span class="channel-vol-display">30%</span>
+              </div>
+              <div class="slider-wrapper">
+                <button class="channel-mute-btn" title="Mute/Unmute"><i class="fa-solid fa-volume-high"></i></button>
+                <input type="range" class="volume-slider" min="0" max="100" value="30">
+              </div>
+            </div>
+
+            <!-- Café Slider -->
+            <div class="ambient-channel" data-sound="cafe">
+              <div class="channel-info">
+                <span class="channel-name"><i class="fa-solid fa-mug-saucer"></i> Cafe Chatter</span>
+                <span class="channel-vol-display">0%</span>
+              </div>
+              <div class="slider-wrapper">
+                <button class="channel-mute-btn muted" title="Mute/Unmute"><i class="fa-solid fa-volume-xmark"></i></button>
+                <input type="range" class="volume-slider" min="0" max="100" value="0">
+              </div>
+            </div>
+
+            <!-- Fireplace Slider -->
+            <div class="ambient-channel" data-sound="fireplace">
+              <div class="channel-info">
+                <span class="channel-name"><i class="fa-solid fa-fire-burner"></i> Warm Fireplace</span>
+                <span class="channel-vol-display">0%</span>
+              </div>
+              <div class="slider-wrapper">
+                <button class="channel-mute-btn muted" title="Mute/Unmute"><i class="fa-solid fa-volume-xmark"></i></button>
+                <input type="range" class="volume-slider" min="0" max="100" value="0">
+              </div>
+            </div>
+          </div>
+          
+          <!-- Master Ambient Toggle -->
+          <button id="ambient-master-btn" class="lounge-btn primary-btn mt-1">
+            <i class="fa-solid fa-wand-magic-sparkles"></i> <span>เปิดมู้ดฟิน ๆ (Ambient ON)</span>
+          </button>
+        </section>
+
+        <!-- Favorites & Filter Panel -->
+        <section class="glass-panel widget library-widget flex-grow">
+          <div class="library-header">
+            <h2 class="widget-title"><i class="fa-solid fa-heart"></i> My Playlist</h2>
+            <div class="library-tabs">
+              <button class="lib-tab active" data-filter="all">ทั้งหมด</button>
+              <button class="lib-tab" data-filter="favorites">เพลงโปรด</button>
+            </div>
+          </div>
+          
+          <!-- Drag-and-drop Local File Importer Zone -->
+          <div class="local-import-zone" id="local-import-zone">
+            <input type="file" id="local-file-input" multiple accept="audio/*" style="display: none;">
+            <button class="import-btn" id="import-btn-trigger" title="คลิกเพื่อเลือกไฟล์เพลงจากเครื่องของคุณ">
+              <i class="fa-solid fa-circle-plus"></i>
+              <span>นำเข้าเพลงในเครื่อง (.mp3/.m4a)</span>
+            </button>
+            <p class="import-tip">หรือลากไฟล์เพลงมาวางที่นี่ได้เลยค่ะ 🎵</p>
+          </div>
+
+          <div class="library-list-container custom-scrollbar">
+            <div id="library-list" class="library-list">
+              <!-- Dynamically Populated Favorites/All Songs -->
+              <div class="loading-state">
+                <div class="spinner"></div>
+                <p>กำลังค้นหาเพลง Jeff Bernat...</p>
+              </div>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <!-- Center Column: Turntable & Premium Player -->
+      <section class="lounge-main-player">
+        <div class="glass-panel player-panel">
+          <!-- Audio Spectrum & Status Overlay -->
+          <div class="visualizer-container">
+            <canvas id="player-visualizer"></canvas>
+            <div class="player-overlay-tag">
+              <span class="status-badge"><span class="pulse-dot"></span> NOW PLAYING</span>
+            </div>
+          </div>
+
+          <!-- Turntable Section -->
+          <div class="turntable-wrapper">
+            <div class="turntable">
+              <!-- Turntable Base -->
+              <div class="turntable-platter"></div>
+              
+              <!-- Tonearm / Needle -->
+              <div class="tonearm" id="tonearm">
+                <div class="tonearm-base"></div>
+                <div class="tonearm-arm"></div>
+                <div class="tonearm-cartridge"></div>
+              </div>
+
+              <!-- Spinning Vinyl Record -->
+              <div class="vinyl-record" id="vinyl-record">
+                <div class="vinyl-grooves"></div>
+                <div class="vinyl-label" id="vinyl-label">
+                  <!-- Album art embedded as label background -->
+                  <div class="vinyl-center-hole"></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Current Song Metadata -->
+          <div class="current-track-info">
+            <h2 id="player-track-title" class="track-title-main">กรุณาเลือกเพลง</h2>
+            <p id="player-track-album" class="track-album-main">Jeff Bernat</p>
+            <div class="track-badge-container">
+              <span id="player-track-year" class="track-badge">Year</span>
+              <span id="player-track-genre" class="track-badge">R&B/Soul</span>
+            </div>
+            
+            <!-- Dynamic Audio Engine Selector Widget -->
+            <div class="engine-selector">
+              <button class="engine-pill active" id="engine-btn-local" title="เล่นไฟล์เพลงเต็มความคมชัดสูงที่จัดเตรียมไว้ในเครื่อง">
+                <i class="fa-solid fa-file-audio"></i> <span>Local File (เพลงเต็ม)</span>
+              </button>
+              <button class="engine-pill" id="engine-btn-youtube" title="สตรีมเพลงเต็มจาก YouTube Background">
+                <i class="fa-brands fa-youtube"></i> <span>YouTube Player</span>
+              </button>
+              <button class="engine-pill" id="engine-btn-itunes" title="เล่นตัวอย่างเพลง 30 วินาทีจาก Apple Music CDN">
+                <i class="fa-brands fa-apple"></i> <span>iTunes 30s</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Timeline & Progress Bar -->
+          <div class="player-progress-area">
+            <span class="time-stamp" id="current-time">0:00</span>
+            <div class="progress-bar-container" id="progress-container">
+              <div class="progress-bar-fill" id="progress-fill"></div>
+              <div class="progress-handle"></div>
+            </div>
+            <span class="time-stamp" id="total-duration">0:30</span>
+          </div>
+
+          <!-- Player Controls -->
+          <div class="player-controls-wrapper">
+            <!-- Secondary buttons -->
+            <button class="control-btn" id="shuffle-btn" title="Shuffle">
+              <i class="fa-solid fa-shuffle"></i>
+            </button>
+            
+            <div class="main-buttons">
+              <button class="control-btn" id="prev-btn" title="Previous Track">
+                <i class="fa-solid fa-backward-step"></i>
+              </button>
+              
+              <!-- Big Play/Pause Button -->
+              <button class="control-btn play-pause-btn" id="play-btn" title="Play">
+                <i class="fa-solid fa-play"></i>
+              </button>
+              
+              <button class="control-btn" id="next-btn" title="Next Track">
+                <i class="fa-solid fa-forward-step"></i>
+              </button>
+            </div>
+
+            <button class="control-btn" id="repeat-btn" title="Repeat">
+              <i class="fa-solid fa-repeat"></i>
+            </button>
+          </div>
+
+          <!-- Extra control parameters -->
+          <div class="player-sub-controls">
+            <!-- Heart button for the current playing song -->
+            <button id="heart-current-btn" class="sub-btn" title="Add to Favorites">
+              <i class="fa-regular fa-heart"></i>
+            </button>
+
+            <!-- Volume Control slider -->
+            <div class="player-volume-wrapper">
+              <i class="fa-solid fa-volume-low volume-icon" id="player-volume-icon"></i>
+              <input type="range" id="player-volume" class="volume-slider small" min="0" max="100" value="80">
+            </div>
+
+            <!-- External share/iTunes link -->
+            <a href="https://music.apple.com/us/artist/jeff-bernat/487317660" target="_blank" class="sub-btn" id="itunes-link" title="Open in Apple Music">
+              <i class="fa-brands fa-apple"></i>
+            </a>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- Right Column: Rich Scrollable Lyrics Panel -->
+      <aside class="lounge-sidebar-right">
+        <section class="glass-panel widget lyrics-widget flex-grow">
+          <div class="lyrics-header">
+            <h2 class="widget-title"><i class="fa-solid fa-quote-left"></i> Cozy Lyrics</h2>
+            <span class="lyrics-tag">Jeff's Poetry</span>
+          </div>
+          
+          <div class="lyrics-body custom-scrollbar" id="lyrics-container">
+            <div class="lyrics-placeholder">
+              <i class="fa-solid fa-music"></i>
+              <p>เนื้อเพลงจะแสดงและขยับตามท่วงทำนองที่นี่เมื่อคุณกดเล่นเพลงโปรดของ Jeff Bernat</p>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+    </div>
+
+    <!-- Album Shelf Carousel Widget -->
+    <footer class="lounge-footer">
+      <div class="shelf-header">
+        <h2 class="widget-title"><i class="fa-solid fa-compact-disc"></i> Jeff Bernat Discography</h2>
+        <span class="shelf-desc">ค้นพบเพลงทั้งหมดจาก iTunes Store</span>
+      </div>
+      <div class="album-shelf-container custom-scrollbar">
+        <div class="album-shelf" id="album-shelf">
+          <!-- Dynamically populated from API -->
+          <div class="album-card skeleton"></div>
+          <div class="album-card skeleton"></div>
+          <div class="album-card skeleton"></div>
+          <div class="album-card skeleton"></div>
+          <div class="album-card skeleton"></div>
+        </div>
+      </div>
+    </footer>
+  </main>
+
+  <!-- Interactive Cozy Floating Overlay Info -->
+  <div class="cozy-toast" id="cozy-toast">
+    <div class="toast-icon"><i class="fa-solid fa-wand-magic-sparkles"></i></div>
+    <div class="toast-body">
+      <div class="toast-title">Cozy Mode Active</div>
+      <div class="toast-desc">แนะฟังคู่กับหูฟังเพื่อมิติบรรยากาศเสียงที่ฟินยิ่งขึ้น 🎧</div>
+    </div>
+  </div>
+
+  <!-- Audio Elements -->
+  <audio id="main-audio"></audio>
+  
+  <!-- Hidden YouTube Background Player for Full Songs (Standard visibility styles to prevent YouTube autoplay/audio block) -->
+  <div id="yt-player-container" style="position: fixed; bottom: 10px; right: 10px; width: 200px; height: 120px; z-index: -9999; opacity: 0.01; pointer-events: none; overflow: hidden;">
+    <div id="yt-player"></div>
+  </div>
+
+  <!-- Main JavaScript File -->
+  <script src="player.js?v=6.0"></script>
+</body>
+</html>
