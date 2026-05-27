@@ -2548,11 +2548,18 @@ function setupMediaSessionActions() {
       });
       navigator.mediaSession.setActionHandler('previoustrack', () => {
         prevTrack();
+        if (!isPlaying) playAudio();
       });
       navigator.mediaSession.setActionHandler('nexttrack', () => {
-        nextTrack();
+        nextTrack(true);
       });
-      console.log("Media Session lock screen actions registered.");
+
+      // Explicitly disable seek-forward/backward so iOS shows ⏮️/⏭️ 
+      // instead of ⏪10s/⏩10s on the lock screen
+      try { navigator.mediaSession.setActionHandler('seekbackward', null); } catch(e) {}
+      try { navigator.mediaSession.setActionHandler('seekforward', null); } catch(e) {}
+
+      console.log("Media Session lock screen actions registered (with Previous/Next priority).");
     } catch (e) {
       console.warn("Failed to setup Media Session actions:", e);
     }
