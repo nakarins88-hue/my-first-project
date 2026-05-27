@@ -24,6 +24,10 @@ let isPlaying = false;
 let tracks = []; // Dynamically populated
 let allBaseTracks = []; // Original API/Built-in songs list
 let favorites = [];
+let cozyDB = null;
+let customTracks = [];
+let hiddenTrackIds = [];
+const STORAGE_KEY_HIDDEN = 'jeff_bernat_hidden_tracks';
 let currentFilter = 'all'; // 'all' | 'favorites'
 let isShuffle = false;
 let isRepeat = false;
@@ -550,7 +554,6 @@ function onPlayerStateChange(event) {
       if (activeCover) activeCover.innerHTML = '';
     }
   } else if (event.data === YT.PlayerState.ENDED) {
-    isPlaying = false;
     if (vinylRecord) vinylRecord.classList.remove('playing');
     if (tonearm) tonearm.classList.remove('active');
     stopProgressPolling();
@@ -563,7 +566,7 @@ function onPlayerStateChange(event) {
     if (isRepeat && ytPlayer) {
       ytPlayer.playVideo();
     } else {
-      nextTrack();
+      nextTrack(true); // Force auto-advance play!
     }
   }
 }
@@ -922,7 +925,7 @@ function pauseAudio() {
   }
 }
 
-function nextTrack() {
+function nextTrack(forcePlay = false) {
   if (isShuffle) {
     let randIdx;
     do {
@@ -934,7 +937,8 @@ function nextTrack() {
     if (nextIdx >= tracks.length) nextIdx = 0;
     loadTrack(nextIdx);
   }
-  if (isPlaying) {
+  if (isPlaying || forcePlay) {
+    isPlaying = true;
     setTimeout(playAudio, 300);
   }
 }
@@ -1284,10 +1288,7 @@ function setupDOMEventListeners() {
 
     elMainAudio.addEventListener('ended', () => {
       console.log("Audio track ended. Advancing to next track.");
-      nextTrack();
-      if (isPlaying) {
-        setTimeout(playAudio, 300);
-      }
+      nextTrack(true); // Force auto-advance play!
     });
   }
 
@@ -2376,12 +2377,6 @@ function initMobileNavigation() {
 
 
 // --- 24. Cozy Music Manager Dashboard & IndexedDB Storage System ---
-let cozyDB = null;
-let customTracks = [];
-let hiddenTrackIds = [];
-
-// LocalStorage key for hidden/deleted tracks
-const STORAGE_KEY_HIDDEN = 'jeff_bernat_hidden_tracks';
 
 // Central tracks state resolver (incorporates built-in, custom, and excludes hidden)
 function resolveTracksList() {
