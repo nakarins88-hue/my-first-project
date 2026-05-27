@@ -138,6 +138,9 @@
             <div class="library-tabs">
               <button class="lib-tab active" data-filter="all">ทั้งหมด</button>
               <button class="lib-tab" data-filter="favorites">เพลงโปรด</button>
+              <button class="lib-tab manage-btn" id="open-dashboard-btn" title="จัดการคลังเพลง (เพิ่ม/ลบ/ซ่อนเพลง)">
+                <i class="fa-solid fa-sliders"></i> <span>จัดการ</span>
+              </button>
             </div>
           </div>
           
@@ -319,6 +322,214 @@
     <div class="toast-body">
       <div class="toast-title">Cozy Mode Active</div>
       <div class="toast-desc">แนะฟังคู่กับหูฟังเพื่อมิติบรรยากาศเสียงที่ฟินยิ่งขึ้น 🎧</div>
+    </div>
+  </div>
+
+  <!-- Music Management Dashboard Full-screen Overlay -->
+  <div id="cozy-dashboard" class="cozy-dashboard-overlay">
+    <div class="cozy-dashboard-modal glass-card">
+      <div class="db-header">
+        <div class="db-brand">
+          <h2><i class="fa-solid fa-sliders text-accent"></i> Cozy Music Manager</h2>
+          <p>แดชบอร์ดจัดการคลังเพลง: อัพโหลด ลบ ซ่อน หรือแก้ไขชื่อเพลงของ Jeff Bernat ได้สะดวกรวดเร็ว 🌙</p>
+        </div>
+        <button class="db-close-btn" id="close-dashboard-btn" title="ปิดหน้าต่าง (Close)"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+
+      <!-- Quick Stats section -->
+      <div class="db-stats-grid">
+        <div class="db-stat-card">
+          <div class="stat-icon-wrapper blue"><i class="fa-solid fa-music"></i></div>
+          <div class="stat-content">
+            <span class="db-stat-label">เพลงที่กำลังใช้งาน</span>
+            <span class="db-stat-val" id="db-stat-total">0</span>
+          </div>
+        </div>
+        <div class="db-stat-card">
+          <div class="stat-icon-wrapper purple"><i class="fa-solid fa-cloud-arrow-up"></i></div>
+          <div class="stat-content">
+            <span class="db-stat-label">เพลงที่คุณเพิ่มเอง (Custom)</span>
+            <span class="db-stat-val" id="db-stat-custom">0</span>
+          </div>
+        </div>
+        <div class="db-stat-card">
+          <div class="stat-icon-wrapper red"><i class="fa-solid fa-eye-slash"></i></div>
+          <div class="stat-content">
+            <span class="db-stat-label">เพลงที่ถูกซ่อน/ลบ (Hidden)</span>
+            <span class="db-stat-val" id="db-stat-hidden">0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Add New Song Accordion section -->
+      <div class="db-section glass-card accordion-section" id="add-song-accordion">
+        <button class="accordion-header" id="add-song-toggle-btn" type="button">
+          <h3><i class="fa-solid fa-circle-plus text-accent"></i> เพิ่มเพลงใหม่เข้าคลังออฟไลน์ (Add New Track)</h3>
+          <i class="fa-solid fa-chevron-down chevron-icon"></i>
+        </button>
+        
+        <form id="add-track-form" class="db-form accordion-content">
+          <div class="form-grid">
+            <!-- Left form column -->
+            <div class="form-col">
+              <div class="form-group">
+                <label for="db-audio-input"><i class="fa-solid fa-file-audio"></i> เลือกไฟล์เพลงจากเครื่องของคุณ *</label>
+                <div class="file-dropzone" id="db-audio-dropzone">
+                  <input type="file" id="db-audio-input" accept="audio/*" required>
+                  <i class="fa-solid fa-cloud-arrow-up dropzone-icon"></i>
+                  <span class="dropzone-text">ลากไฟล์เพลง .mp3 / .m4a วางที่นี่ หรือคลิกเพื่อเลือกไฟล์</span>
+                  <span class="file-name-display" id="db-audio-filename">ยังไม่ได้เลือกไฟล์</span>
+                </div>
+              </div>
+              
+              <div class="form-group">
+                <label for="track-title">ชื่อเพลง (Title) *</label>
+                <input type="text" id="track-title" placeholder="ตัวอย่าง: Cozy Coffee Shop" required>
+              </div>
+              
+              <div class="form-group">
+                <label for="track-album">ชื่ออัลบั้ม (Album) *</label>
+                <input type="text" id="track-album" placeholder="ตัวอย่าง: Custom Hits" required>
+              </div>
+            </div>
+            
+            <!-- Right form column -->
+            <div class="form-col">
+              <div class="form-group">
+                <label><i class="fa-solid fa-image"></i> ภาพปกอัลบั้ม (Cover Artwork)</label>
+                <!-- Cover Selection Options -->
+                <div class="cover-selection-options">
+                  <label class="cover-option">
+                    <input type="radio" name="cover-source" value="upload" checked>
+                    <span>อัพโหลดรูปปก</span>
+                  </label>
+                  <label class="cover-option">
+                    <input type="radio" name="cover-source" value="official">
+                    <span>ปกสำเร็จรูป</span>
+                  </label>
+                  <label class="cover-option">
+                    <input type="radio" name="cover-source" value="url">
+                    <span>ใช้ลิงก์รูปภาพ (URL)</span>
+                  </label>
+                </div>
+                
+                <!-- Artwork Dropzone (Upload option) -->
+                <div class="file-dropzone small" id="db-artwork-dropzone">
+                  <input type="file" id="db-artwork-input" accept="image/*">
+                  <i class="fa-solid fa-file-image dropzone-icon"></i>
+                  <span class="dropzone-text">อัพโหลดรูปภาพปก .jpg/.png</span>
+                  <span class="file-name-display" id="db-artwork-filename">ยังไม่ได้เลือกไฟล์</span>
+                </div>
+                
+                <!-- Official Cover selector (Official option - hidden by default) -->
+                <div class="official-covers-grid" id="official-covers-grid" style="display: none;">
+                  <div class="off-cover-item active" data-cover="default_cover.png" style="background-image: url('default_cover.png')"></div>
+                  <div class="off-cover-item" data-cover="cover_renaissance.png" style="background-image: url('cover_renaissance.png')"></div>
+                  <div class="off-cover-item" data-cover="cover_meantime.png" style="background-image: url('cover_meantime.png')"></div>
+                  <div class="off-cover-item" data-cover="cover_shelovesmenot.png" style="background-image: url('cover_shelovesmenot.png')"></div>
+                  <div class="off-cover-item" data-cover="cover_singles.png" style="background-image: url('cover_singles.png')"></div>
+                </div>
+                
+                <!-- Artwork URL Input (URL option - hidden by default) -->
+                <input type="url" id="track-cover-url" class="db-input" placeholder="https://example.com/cover.jpg" style="display: none;">
+              </div>
+              
+              <div class="form-row">
+                <div class="form-group half">
+                  <label for="track-year">ปีที่ปล่อยเพลง (Year)</label>
+                  <input type="number" id="track-year" class="db-input" value="2026" min="1900" max="2100">
+                </div>
+                <div class="form-group half">
+                  <label for="track-genre">แนวเพลง (Genre)</label>
+                  <input type="text" id="track-genre" class="db-input" value="R&B/Soul">
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-actions">
+            <button type="button" class="lounge-btn secondary-btn" id="db-form-clear-btn">ล้างข้อมูล</button>
+            <button type="submit" class="lounge-btn primary-btn"><i class="fa-solid fa-floppy-disk"></i> บันทึกเพลงเข้าเครื่อง</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Catalog Table Grid section -->
+      <div class="db-section glass-card flex-grow db-catalog-section">
+        <div class="catalog-header">
+          <h3><i class="fa-solid fa-compact-disc text-accent"></i> รายการเพลงในคลังทั้งหมดของคุณ</h3>
+          
+          <div class="catalog-filters-bar">
+            <div class="catalog-search-wrapper">
+              <i class="fa-solid fa-magnifying-glass search-icon"></i>
+              <input type="text" id="db-catalog-search" placeholder="ค้นหาเพลงในคลัง...">
+            </div>
+            
+            <div class="catalog-tabs">
+              <button type="button" class="catalog-tab active" data-filter="all">ทั้งหมด</button>
+              <button type="button" class="catalog-tab" data-filter="builtin">ในระบบ</button>
+              <button type="button" class="catalog-tab" data-filter="custom">ที่อัพโหลดเอง</button>
+              <button type="button" class="catalog-tab" data-filter="hidden">ที่ซ่อน/ลบไว้</button>
+            </div>
+          </div>
+        </div>
+        
+        <div class="catalog-table-wrapper custom-scrollbar">
+          <table class="catalog-table" id="db-catalog-table">
+            <thead>
+              <tr>
+                <th>ภาพปก</th>
+                <th>ชื่อเพลง</th>
+                <th>อัลบั้ม</th>
+                <th>ประเภท</th>
+                <th>ปี</th>
+                <th style="text-align: right;">การจัดการเพลง</th>
+              </tr>
+            </thead>
+            <tbody id="db-catalog-body">
+              <!-- Dynamically populated inside player-v8.js -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Inline Edit Track Modal -->
+  <div id="cozy-edit-modal" class="cozy-edit-modal-overlay">
+    <div class="cozy-edit-modal-content glass-card">
+      <div class="edit-modal-header">
+        <h3><i class="fa-solid fa-pen-to-square text-accent"></i> แก้ไขข้อมูลเพลง</h3>
+        <button class="edit-modal-close-btn" id="close-edit-modal-btn" type="button"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="edit-track-form" class="edit-track-form">
+        <input type="hidden" id="edit-track-id">
+        
+        <div class="form-group">
+          <label for="edit-track-title">ชื่อเพลง (Title) *</label>
+          <input type="text" id="edit-track-title" class="db-input" required>
+        </div>
+        <div class="form-group">
+          <label for="edit-track-album">ชื่ออัลบั้ม (Album) *</label>
+          <input type="text" id="edit-track-album" class="db-input" required>
+        </div>
+        
+        <div class="form-row">
+          <div class="form-group half">
+            <label for="edit-track-year">ปี (Year)</label>
+            <input type="number" id="edit-track-year" class="db-input" required>
+          </div>
+          <div class="form-group half">
+            <label for="edit-track-genre">แนวเพลง (Genre)</label>
+            <input type="text" id="edit-track-genre" class="db-input" required>
+          </div>
+        </div>
+        
+        <div class="form-actions">
+          <button type="button" class="lounge-btn secondary-btn" id="close-edit-modal-btn-2">ยกเลิก</button>
+          <button type="submit" class="lounge-btn primary-btn"><i class="fa-solid fa-check"></i> บันทึกข้อมูล</button>
+        </div>
+      </form>
     </div>
   </div>
 

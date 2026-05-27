@@ -22,6 +22,7 @@ let useFallbackAudio = false; // Automatically set to true if YouTube fails/is b
 let currentTrackIndex = 0;
 let isPlaying = false;
 let tracks = []; // Dynamically populated
+let allBaseTracks = []; // Original API/Built-in songs list
 let favorites = [];
 let currentFilter = 'all'; // 'all' | 'favorites'
 let isShuffle = false;
@@ -383,9 +384,13 @@ function populateAllLocalTracks() {
       trackViewUrl: "https://music.apple.com/us/artist/jeff-bernat/487317660"
     };
   });
-  
-  tracks = localTracks;
-}
+    allBaseTracks = localTracks;
+    if (typeof resolveTracksList === 'function') {
+      resolveTracksList();
+    } else {
+      tracks = localTracks;
+    }
+  }
 
 // Instantly preload the backup tracks list so the page has tracks before API loads
 populateAllLocalTracks();
@@ -617,6 +622,8 @@ function updatePlayerUIPlaying(playing) {
 }
 
 function importLocalTracks(files) {
+  let hasAsyncPath = false;
+  
   Array.from(files).forEach(file => {
     const objectURL = URL.createObjectURL(file);
     const fileNameClean = file.name.toLowerCase().replace(/[^a-z0-9]/g, '');
@@ -634,25 +641,83 @@ function importLocalTracks(files) {
       loadTrack(matchedIdx);
     } else {
       const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
-      const newTrack = {
-        trackId: Date.now() + Math.random(),
+      const newTrackId = 'custom_' + Date.now() + Math.round(Math.random() * 100);
+      
+      const customTrack = {
+        trackId: newTrackId,
         trackName: nameWithoutExt,
-        collectionName: "อิมพอร์ตจากเครื่อง / Local Custom",
-        artworkUrl100: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=500",
-        previewUrl: objectURL,
-        localUrl: objectURL,
+        collectionName: "อิมพอร์ตจากเครื่อง (Local Custom)",
+        artworkUrl100: "default_cover.png",
+        audioBlob: file, // Store the binary file Blob!
         releaseDate: new Date().toISOString(),
         primaryGenreName: "Local Audio",
-        trackViewUrl: "#"
+        trackViewUrl: "#",
+        isCustom: true
       };
-      tracks.push(newTrack);
-      showToast("เพิ่มเพลงใหม่สำเร็จ! 🎵", `อิมพอร์ตเพลง "${newTrack.trackName}" เป็นเพลงใหม่แล้วค่ะ`);
-      loadTrack(tracks.length - 1);
+      
+      if (typeof saveCustomTrackToDB === 'function' && typeof loadCustomTracksFromDB === 'function') {
+        hasAsyncPath = true;
+        saveCustomTrackToDB(customTrack)
+          .then(() => loadCustomTracksFromDB())
+          .then(() => {
+            resolveTracksList();
+            renderLibrary();
+            renderAlbumShelf();
+            
+            // Find active index of newly created track
+            const activeIdx = tracks.findIndex(t => t.trackId === newTrackId);
+            if (activeIdx !== -1) {
+              loadTrack(activeIdx);
+              playAudio();
+            }
+            showToast("เพิ่มเพลงสำเร็จ! 🎵", `จัดเก็บเพลง "${nameWithoutExt}" เข้าคลังแบบออฟไลน์เรียบร้อยแล้วค่ะ`);
+          })
+          .catch(err => {
+            console.error("Auto import save failed:", err);
+            // Fallback to temporary session track if IndexedDB fails
+            const fallbackTrack = {
+              trackId: newTrackId,
+              trackName: nameWithoutExt,
+              collectionName: "อิมพอร์ตชั่วคราว (Session Custom)",
+              artworkUrl100: "default_cover.png",
+              previewUrl: objectURL,
+              localUrl: objectURL,
+              releaseDate: new Date().toISOString(),
+              primaryGenreName: "Local Audio",
+              trackViewUrl: "#",
+              isCustom: true
+            };
+            tracks.push(fallbackTrack);
+            renderLibrary();
+            renderAlbumShelf();
+            loadTrack(tracks.length - 1);
+            playAudio();
+          });
+      } else {
+        // Fallback
+        const fallbackTrack = {
+          trackId: newTrackId,
+          trackName: nameWithoutExt,
+          collectionName: "อิมพอร์ตชั่วคราว (Session Custom)",
+          artworkUrl100: "default_cover.png",
+          previewUrl: objectURL,
+          localUrl: objectURL,
+          releaseDate: new Date().toISOString(),
+          primaryGenreName: "Local Audio",
+          trackViewUrl: "#",
+          isCustom: true
+        };
+        tracks.push(fallbackTrack);
+        loadTrack(tracks.length - 1);
+      }
     }
   });
-  renderLibrary();
-  renderAlbumShelf();
-  playAudio();
+  
+  if (!hasAsyncPath) {
+    renderLibrary();
+    renderAlbumShelf();
+    playAudio();
+  }
 }
 
 function loadTrack(index) {
@@ -1128,10 +1193,14 @@ document.addEventListener('DOMContentLoaded', () => {
     elImportBtnTrigger = document.getElementById('import-btn-trigger');
     elLocalImportZone = document.getElementById('local-import-zone');
 
-    // --- Render Fallback Tracks Immediately (Prevents empty/spinner lock!) ---
-    renderLibrary();
-    renderAlbumShelf();
-    loadTrack(0);
+    // --- Initialize Cozy Music Manager Dashboard & Catalog ---
+    if (typeof initCozyDashboard === 'function') {
+      initCozyDashboard();
+    } else {
+      renderLibrary();
+      renderAlbumShelf();
+      loadTrack(0);
+    }
 
     // --- Dynamic Particle/Weather Canvas System ---
     setupCanvasVisuals();
@@ -1634,7 +1703,12 @@ async function fetchSongsFromiTunes() {
           return hasB - hasA; // descending order (has local files first)
         });
         
-        tracks = mergedTracks;
+        allBaseTracks = mergedTracks;
+        if (typeof resolveTracksList === 'function') {
+          resolveTracksList();
+        } else {
+          tracks = mergedTracks;
+        }
         renderLibrary();
         renderAlbumShelf();
         loadTrack(currentTrackIndex);
@@ -2299,3 +2373,734 @@ function initMobileNavigation() {
     });
   }
 }
+
+
+// --- 24. Cozy Music Manager Dashboard & IndexedDB Storage System ---
+let cozyDB = null;
+let customTracks = [];
+let hiddenTrackIds = [];
+
+// LocalStorage key for hidden/deleted tracks
+const STORAGE_KEY_HIDDEN = 'jeff_bernat_hidden_tracks';
+
+// Central tracks state resolver (incorporates built-in, custom, and excludes hidden)
+function resolveTracksList() {
+  console.log("Resolving tracks list... Base count:", allBaseTracks.length);
+  
+  // 1. Filter out hidden/deleted built-in tracks
+  let resolved = allBaseTracks.filter(t => !hiddenTrackIds.includes(t.trackId));
+  
+  // 2. Append custom uploaded tracks
+  customTracks.forEach(custom => {
+    // Avoid duplicates, override if already exists
+    const idx = resolved.findIndex(t => t.trackId === custom.trackId);
+    if (idx !== -1) {
+      resolved[idx] = custom;
+    } else {
+      resolved.push(custom);
+    }
+  });
+  
+  // 3. Keep local audio tracks sorted first for immediate playability
+  resolved.sort((a, b) => {
+    const hasA = (a.localUrl || a.isCustom) ? 1 : 0;
+    const hasB = (b.localUrl || b.isCustom) ? 1 : 0;
+    return hasB - hasA;
+  });
+  
+  tracks = resolved;
+  console.log("Tracks list resolved. Active count:", tracks.length);
+}
+
+// 1. Initialize IndexedDB
+function initIndexedDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open('CozyPlayerDB', 1);
+    
+    request.onerror = (e) => {
+      console.error("IndexedDB open error:", e.target.error);
+      reject(e.target.error);
+    };
+    
+    request.onsuccess = (e) => {
+      cozyDB = e.target.result;
+      console.log("CozyPlayerDB Opened Successfully.");
+      resolve(cozyDB);
+    };
+    
+    request.onupgradeneeded = (e) => {
+      const dbInstance = e.target.result;
+      if (!dbInstance.objectStoreNames.contains('custom_tracks')) {
+        dbInstance.createObjectStore('custom_tracks', { keyPath: 'trackId' });
+      }
+      console.log("CozyPlayerDB Upgrade/Setup Completed.");
+    };
+  });
+}
+
+// 2. Load custom tracks from IndexedDB and resolve Blob URLs
+async function loadCustomTracksFromDB() {
+  if (!cozyDB) return;
+  
+  return new Promise((resolve, reject) => {
+    const transaction = cozyDB.transaction(['custom_tracks'], 'readonly');
+    const store = transaction.objectStore('custom_tracks');
+    const request = store.getAll();
+    
+    request.onerror = (e) => {
+      console.error("Load custom tracks error:", e.target.error);
+      reject(e.target.error);
+    };
+    
+    request.onsuccess = (e) => {
+      // Clear previously active base64 / blob URLs to prevent memory leak
+      customTracks.forEach(t => {
+        if (t.localUrl && t.localUrl.startsWith('blob:')) {
+          URL.revokeObjectURL(t.localUrl);
+        }
+        if (t.artworkUrl100 && t.artworkUrl100.startsWith('blob:')) {
+          URL.revokeObjectURL(t.artworkUrl100);
+        }
+      });
+      
+      const results = request.result || [];
+      customTracks = results.map(track => {
+        // Hydrate Blob references to browser-playable Blob URLs!
+        if (track.audioBlob) {
+          const url = URL.createObjectURL(track.audioBlob);
+          track.previewUrl = url;
+          track.localUrl = url;
+        }
+        if (track.artworkBlob) {
+          track.artworkUrl100 = URL.createObjectURL(track.artworkBlob);
+        }
+        track.isCustom = true;
+        return track;
+      });
+      
+      console.log("Loaded custom tracks from DB:", customTracks.length);
+      resolve(customTracks);
+    };
+  });
+}
+
+// 3. Save a custom track into IndexedDB
+function saveCustomTrackToDB(track) {
+  return new Promise((resolve, reject) => {
+    if (!cozyDB) return reject("Database not initialized");
+    
+    const transaction = cozyDB.transaction(['custom_tracks'], 'readwrite');
+    const store = transaction.objectStore('custom_tracks');
+    const request = store.put(track);
+    
+    request.onerror = (e) => reject(e.target.error);
+    request.onsuccess = (e) => {
+      console.log("Successfully saved custom track:", track.trackName);
+      resolve();
+    };
+  });
+}
+
+// 4. Delete a custom track from IndexedDB
+function deleteCustomTrackFromDB(trackId) {
+  return new Promise((resolve, reject) => {
+    if (!cozyDB) return reject("Database not initialized");
+    
+    const transaction = cozyDB.transaction(['custom_tracks'], 'readwrite');
+    const store = transaction.objectStore('custom_tracks');
+    const request = store.delete(trackId);
+    
+    request.onerror = (e) => reject(e.target.error);
+    request.onsuccess = (e) => {
+      console.log("Successfully deleted custom track ID:", trackId);
+      resolve();
+    };
+  });
+}
+
+// --- 25. Cozy Dashboard UI Controllers & Events Setup ---
+function initCozyDashboard() {
+  console.log("Bootstrapping Cozy Music Manager Dashboard Engine...");
+  
+  // A. Load hidden track IDs from LocalStorage safely
+  try {
+    hiddenTrackIds = JSON.parse(localStorage.getItem(STORAGE_KEY_HIDDEN)) || [];
+  } catch (err) {
+    hiddenTrackIds = [];
+  }
+  
+  // B. Initialize database, load tracks, and hook up UI
+  initIndexedDB()
+    .then(() => loadCustomTracksFromDB())
+    .then(() => {
+      // Resolve the initial list
+      resolveTracksList();
+      
+      // Update UI elements
+      renderLibrary();
+      renderAlbumShelf();
+      
+      // Ensure player initializes with the correct track safely
+      if (tracks.length > 0) {
+        loadTrack(0);
+      }
+      
+      // C. Set up UI event listeners
+      setupDashboardEventListeners();
+    })
+    .catch(err => {
+      console.error("Dashboard engine boot failure:", err);
+      // Fail-safe default render
+      resolveTracksList();
+      renderLibrary();
+      renderAlbumShelf();
+      if (tracks.length > 0) loadTrack(0);
+    });
+}
+
+// Open dashboard overlay modal
+function openDashboard() {
+  const overlay = document.getElementById('cozy-dashboard');
+  if (overlay) {
+    overlay.classList.add('active');
+    updateDashboardStats();
+    renderDashboardCatalog();
+  }
+}
+
+// Close dashboard overlay modal
+function closeDashboard() {
+  const overlay = document.getElementById('cozy-dashboard');
+  if (overlay) {
+    overlay.classList.remove('active');
+  }
+}
+
+// Open inline edit modal for custom tracks
+let currentEditingTrackId = null;
+function openEditModal(trackId) {
+  const track = tracks.find(t => t.trackId === trackId);
+  if (!track) return;
+  
+  currentEditingTrackId = trackId;
+  
+  const editTitle = document.getElementById('edit-track-title');
+  const editAlbum = document.getElementById('edit-track-album');
+  const editYear = document.getElementById('edit-track-year');
+  const editGenre = document.getElementById('edit-track-genre');
+  
+  if (editTitle) editTitle.value = track.trackName || '';
+  if (editAlbum) editAlbum.value = track.collectionName || '';
+  if (editYear) editYear.value = track.releaseDate ? new Date(track.releaseDate).getFullYear() : 2026;
+  if (editGenre) editGenre.value = track.primaryGenreName || 'R&B/Soul';
+  
+  const modal = document.getElementById('cozy-edit-modal');
+  if (modal) modal.classList.add('active');
+}
+
+function closeEditModal() {
+  const modal = document.getElementById('cozy-edit-modal');
+  if (modal) modal.classList.remove('active');
+  currentEditingTrackId = null;
+}
+
+// Update dashboard header stats
+function updateDashboardStats() {
+  const elTotal = document.getElementById('db-stat-total');
+  const elCustom = document.getElementById('db-stat-custom');
+  const elHidden = document.getElementById('db-stat-hidden');
+  
+  if (elTotal) elTotal.textContent = tracks.length;
+  if (elCustom) elCustom.textContent = customTracks.length;
+  if (elHidden) elHidden.textContent = hiddenTrackIds.length;
+}
+
+// Render dynamic table list inside the dashboard modal
+function renderDashboardCatalog() {
+  const tbody = document.getElementById('db-catalog-body');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+  
+  const searchInput = document.getElementById('db-catalog-search');
+  const searchQuery = searchInput ? searchInput.value.toLowerCase().trim() : '';
+  
+  const activeTab = document.querySelector('.catalog-tab.active');
+  const filterType = activeTab ? activeTab.getAttribute('data-filter') : 'all'; // 'all'|'builtin'|'custom'|'hidden'
+  
+  // Gather base list
+  let list = [];
+  if (filterType === 'all') {
+    // Show active tracks AND hidden ones to allow easy restore!
+    list = [...tracks];
+    hiddenTrackIds.forEach(id => {
+      const match = allBaseTracks.find(t => t.trackId === id);
+      if (match && !list.some(t => t.trackId === id)) {
+        list.push(match);
+      }
+    });
+  } else if (filterType === 'builtin') {
+    list = tracks.filter(t => !t.isCustom);
+  } else if (filterType === 'custom') {
+    list = tracks.filter(t => t.isCustom);
+  } else if (filterType === 'hidden') {
+    // Gather all hidden track objects
+    list = allBaseTracks.filter(t => hiddenTrackIds.includes(t.trackId));
+  }
+  
+  // Apply Search query filter
+  if (searchQuery) {
+    list = list.filter(t => 
+      t.trackName.toLowerCase().includes(searchQuery) ||
+      t.collectionName.toLowerCase().includes(searchQuery)
+    );
+  }
+  
+  if (list.length === 0) {
+    tbody.innerHTML = `
+      <tr>
+        <td colspan="6" style="text-align: center; padding: 30px; opacity: 0.5;">
+          <i class="fa-solid fa-folder-open" style="font-size: 1.5rem; margin-bottom: 8px; display: block;"></i>
+          ไม่มีเพลงที่ตรงตามเงื่อนไขการค้นหา
+        </td>
+      </tr>
+    `;
+    return;
+  }
+  
+  list.forEach((track, index) => {
+    const isHidden = hiddenTrackIds.includes(track.trackId);
+    const isCustom = !!track.isCustom;
+    
+    let typeBadge = '';
+    if (isHidden) {
+      typeBadge = '<span class="badge badge-hidden">Hidden</span>';
+    } else if (isCustom) {
+      typeBadge = '<span class="badge badge-custom">Custom</span>';
+    } else {
+      typeBadge = '<span class="badge badge-builtin">Built-in</span>';
+    }
+    
+    const yearDisplay = track.releaseDate ? new Date(track.releaseDate).getFullYear() : '2026';
+    
+    // Map covers safely
+    const artwork = track.artworkUrl100 || getLocalCoverUrl(track.trackName, track.collectionName);
+    
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><div class="db-cover-thumb" style="background-image: url('${artwork}')"></div></td>
+      <td style="font-weight: 600; color: #fff;">${track.trackName}</td>
+      <td style="color: var(--text-sub);">${track.collectionName}</td>
+      <td>${typeBadge}</td>
+      <td>${yearDisplay}</td>
+      <td>
+        <div class="db-actions">
+          ${!isHidden ? `
+            <button class="db-action-btn play-btn" data-id="${track.trackId}" title="เล่นเพลงนี้"><i class="fa-solid fa-play"></i></button>
+            <button class="db-action-btn edit-btn" data-id="${track.trackId}" title="แก้ไขข้อมูลเพลง"><i class="fa-solid fa-pen-to-square"></i></button>
+          ` : ''}
+          ${isCustom ? `
+            <button class="db-action-btn delete-btn" data-id="${track.trackId}" title="ลบเพลงออกถาวร"><i class="fa-solid fa-trash-can"></i></button>
+          ` : `
+            ${isHidden ? `
+              <button class="db-action-btn restore-btn" data-id="${track.trackId}" title="กู้คืนเพลงเข้าคลัง"><i class="fa-solid fa-trash-arrow-up"></i></button>
+            ` : `
+              <button class="db-action-btn delete-btn" data-id="${track.trackId}" title="ซ่อนเพลงนี้"><i class="fa-solid fa-eye-slash"></i></button>
+            `}
+          `}
+        </div>
+      </td>
+    `;
+    
+    // Bind action listeners
+    const btnPlay = tr.querySelector('.play-btn');
+    const btnEdit = tr.querySelector('.edit-btn');
+    const btnDel = tr.querySelector('.delete-btn');
+    const btnRestore = tr.querySelector('.restore-btn');
+    
+    if (btnPlay) {
+      btnPlay.addEventListener('click', () => {
+        closeDashboard();
+        const activeIdx = tracks.findIndex(t => t.trackId === track.trackId);
+        if (activeIdx !== -1) {
+          loadTrack(activeIdx);
+          playAudio();
+        }
+      });
+    }
+    
+    if (btnEdit) {
+      btnEdit.addEventListener('click', () => openEditModal(track.trackId));
+    }
+    
+    if (btnDel) {
+      btnDel.addEventListener('click', () => {
+        if (isCustom) {
+          if (confirm(`คุณต้องการลบเพลง "${track.trackName}" ออกถาวรใช่หรือไม่?`)) {
+            deleteCustomTrackFromDB(track.trackId)
+              .then(() => loadCustomTracksFromDB())
+              .then(() => {
+                resolveTracksList();
+                renderLibrary();
+                updateDashboardStats();
+                renderDashboardCatalog();
+                showToast("ลบเพลงสำเร็จ! 🗑️", `ลบเพลง "${track.trackName}" เรียบร้อยแล้วค่ะ`);
+              });
+          }
+        } else {
+          // Hide built-in track
+          hiddenTrackIds.push(track.trackId);
+          localStorage.setItem(STORAGE_KEY_HIDDEN, JSON.stringify(hiddenTrackIds));
+          resolveTracksList();
+          renderLibrary();
+          updateDashboardStats();
+          renderDashboardCatalog();
+          showToast("ซ่อนเพลงเรียบร้อย! 👁️‍🗨️", `ซ่อนเพลง "${track.trackName}" จากเครื่องเล่นแล้วค่ะ`);
+        }
+      });
+    }
+    
+    if (btnRestore) {
+      btnRestore.addEventListener('click', () => {
+        hiddenTrackIds = hiddenTrackIds.filter(id => id !== track.trackId);
+        localStorage.setItem(STORAGE_KEY_HIDDEN, JSON.stringify(hiddenTrackIds));
+        resolveTracksList();
+        renderLibrary();
+        updateDashboardStats();
+        renderDashboardCatalog();
+        showToast("กู้คืนเพลงสำเร็จ! ✨", `นำเพลง "${track.trackName}" กลับเข้าคลังเล่นแล้วค่ะ`);
+      });
+    }
+    
+    tbody.appendChild(tr);
+  });
+}
+
+// 5. Setup event bindings for forms, dropzones, tabs
+function setupDashboardEventListeners() {
+  const openBtn = document.getElementById('open-dashboard-btn');
+  const closeBtn = document.getElementById('close-dashboard-btn');
+  const overlay = document.getElementById('cozy-dashboard');
+  
+  // Modal toggle
+  if (openBtn) openBtn.addEventListener('click', openDashboard);
+  if (closeBtn) closeBtn.addEventListener('click', closeDashboard);
+  
+  // Close modal when clicking outside content area
+  if (overlay) {
+    overlay.addEventListener('click', (e) => {
+      if (e.target === overlay) closeDashboard();
+    });
+  }
+  
+  // Keyboard Escape key bind
+  window.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape') {
+      closeDashboard();
+      closeEditModal();
+    }
+  });
+  
+  // Accordion Expand/Collapse Form
+  const accordionBtn = document.getElementById('add-song-toggle-btn');
+  const accordionSection = document.getElementById('add-song-accordion');
+  if (accordionBtn && accordionSection) {
+    accordionBtn.addEventListener('click', () => {
+      accordionSection.classList.toggle('active');
+    });
+  }
+  
+  // Track Form elements pre-population when dropping audio file
+  const audioInput = document.getElementById('db-audio-input');
+  const audioFilename = document.getElementById('db-audio-filename');
+  const trackTitleInput = document.getElementById('track-title');
+  
+  if (audioInput) {
+    audioInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file) {
+        if (audioFilename) audioFilename.textContent = file.name;
+        
+        // Auto-extract track title from clean file name (e.g. "Jeff Bernat - dist.mp3" -> "Jeff Bernat - dist")
+        const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+        if (trackTitleInput && !trackTitleInput.value) {
+          trackTitleInput.value = nameWithoutExt;
+        }
+      }
+    });
+  }
+  
+  // Drag & drop handlers for audio file dropzone
+  const audioDropzone = document.getElementById('db-audio-dropzone');
+  if (audioDropzone && audioInput) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+      audioDropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        audioDropzone.classList.add('dragover');
+      }, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+      audioDropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        audioDropzone.classList.remove('dragover');
+      }, false);
+    });
+    
+    audioDropzone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      const file = dt.files[0];
+      if (file && file.type.startsWith('audio/')) {
+        audioInput.files = dt.files;
+        if (audioFilename) audioFilename.textContent = file.name;
+        
+        const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
+        if (trackTitleInput && !trackTitleInput.value) {
+          trackTitleInput.value = nameWithoutExt;
+        }
+      }
+    }, false);
+  }
+  
+  // Radio buttons switcher for cover artwork sources
+  const coverRadios = document.querySelectorAll('input[name="cover-source"]');
+  const dropzoneArtwork = document.getElementById('db-artwork-dropzone');
+  const gridOfficial = document.getElementById('official-covers-grid');
+  const inputUrl = document.getElementById('track-cover-url');
+  
+  coverRadios.forEach(radio => {
+    radio.addEventListener('change', (e) => {
+      const source = e.target.value;
+      
+      // Hide all options
+      if (dropzoneArtwork) dropzoneArtwork.style.display = 'none';
+      if (gridOfficial) gridOfficial.style.display = 'none';
+      if (inputUrl) inputUrl.style.display = 'none';
+      
+      // Show selected source input
+      if (source === 'upload' && dropzoneArtwork) {
+        dropzoneArtwork.style.display = 'flex';
+      } else if (source === 'official' && gridOfficial) {
+        gridOfficial.style.display = 'grid';
+      } else if (source === 'url' && inputUrl) {
+        inputUrl.style.display = 'block';
+      }
+    });
+  });
+  
+  // Official covers item toggle
+  const coverItems = document.querySelectorAll('.off-cover-item');
+  coverItems.forEach(item => {
+    item.addEventListener('click', () => {
+      coverItems.forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+    });
+  });
+  
+  // Image dropzone name display
+  const artworkInput = document.getElementById('db-artwork-input');
+  const artworkFilename = document.getElementById('db-artwork-filename');
+  if (artworkInput) {
+    artworkInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (file && artworkFilename) {
+        artworkFilename.textContent = file.name;
+      }
+    });
+  }
+  
+  const artworkDropzone = document.getElementById('db-artwork-dropzone');
+  if (artworkDropzone && artworkInput) {
+    ['dragenter', 'dragover'].forEach(eventName => {
+      artworkDropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        artworkDropzone.classList.add('dragover');
+      }, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+      artworkDropzone.addEventListener(eventName, (e) => {
+        e.preventDefault();
+        artworkDropzone.classList.remove('dragover');
+      }, false);
+    });
+    
+    artworkDropzone.addEventListener('drop', (e) => {
+      const dt = e.dataTransfer;
+      const file = dt.files[0];
+      if (file && file.type.startsWith('image/')) {
+        artworkInput.files = dt.files;
+        if (artworkFilename) artworkFilename.textContent = file.name;
+      }
+    }, false);
+  }
+  
+  // Form submission - Add song
+  const addForm = document.getElementById('add-track-form');
+  if (addForm) {
+    addForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const audioFile = audioInput.files[0];
+      if (!audioFile) {
+        alert("กรุณาเลือกไฟล์เพลงด้วยค่ะ!");
+        return;
+      }
+      
+      const title = trackTitleInput.value.trim();
+      const album = document.getElementById('track-album').value.trim();
+      const year = document.getElementById('track-year').value.trim();
+      const genre = document.getElementById('track-genre').value.trim();
+      
+      const artworkSource = document.querySelector('input[name="cover-source"]:checked').value;
+      
+      let artworkBlob = null;
+      let artworkUrl100 = 'default_cover.png';
+      
+      if (artworkSource === 'upload') {
+        const artFile = artworkInput.files[0];
+        if (artFile) {
+          artworkBlob = artFile;
+        }
+      } else if (artworkSource === 'official') {
+        const activeOffItem = document.querySelector('.off-cover-item.active');
+        if (activeOffItem) {
+          artworkUrl100 = activeOffItem.getAttribute('data-cover');
+        }
+      } else if (artworkSource === 'url') {
+        const urlVal = inputUrl.value.trim();
+        if (urlVal) {
+          artworkUrl100 = urlVal;
+        }
+      }
+      
+      // Compose custom track object
+      const trackId = 'custom_' + Date.now();
+      const customTrack = {
+        trackId: trackId,
+        trackName: title,
+        collectionName: album,
+        artworkUrl100: artworkUrl100,
+        artworkBlob: artworkBlob,
+        audioBlob: audioFile,
+        releaseDate: new Date(year, 0, 1).toISOString(),
+        primaryGenreName: genre,
+        trackViewUrl: '#',
+        isCustom: true
+      };
+      
+      showToast("กำลังประมวลผล... ⏳", "บันทึกเพลงระดับสตูดิโอเข้าหน่วยความจำบราวเซอร์...");
+      
+      try {
+        await saveCustomTrackToDB(customTrack);
+        await loadCustomTracksFromDB();
+        
+        // Re-resolve
+        resolveTracksList();
+        renderLibrary();
+        updateDashboardStats();
+        renderDashboardCatalog();
+        
+        // Reset form & accordion collapse
+        addForm.reset();
+        if (audioFilename) audioFilename.textContent = "ยังไม่ได้เลือกไฟล์";
+        if (artworkFilename) artworkFilename.textContent = "ยังไม่ได้เลือกไฟล์";
+        if (accordionSection) accordionSection.classList.remove('active');
+        
+        showToast("เพิ่มเพลงสำเร็จ! 🎉", `เพลง "${title}" ถูกจัดเก็บเข้าคลังพร้อมเล่นออฟไลน์แล้วค่ะ`);
+      } catch (err) {
+        console.error("Save custom track failed:", err);
+        alert("เกิดข้อผิดพลาดในการบันทึกเพลง: " + err);
+      }
+    });
+  }
+  
+  // Form clear button
+  const formClearBtn = document.getElementById('db-form-clear-btn');
+  if (formClearBtn && addForm) {
+    formClearBtn.addEventListener('click', () => {
+      addForm.reset();
+      if (audioFilename) audioFilename.textContent = "ยังไม่ได้เลือกไฟล์";
+      if (artworkFilename) artworkFilename.textContent = "ยังไม่ได้เลือกไฟล์";
+    });
+  }
+  
+  // Catalog tabs filter binds
+  const catTabs = document.querySelectorAll('.catalog-tab');
+  catTabs.forEach(tab => {
+    tab.addEventListener('click', () => {
+      catTabs.forEach(t => t.classList.remove('active'));
+      tab.classList.add('active');
+      renderDashboardCatalog();
+    });
+  });
+  
+  // Search bar binder
+  const catSearch = document.getElementById('db-catalog-search');
+  if (catSearch) {
+    catSearch.addEventListener('input', renderDashboardCatalog);
+  }
+  
+  // Edit form modal close buttons
+  const closeEditBtn = document.getElementById('close-edit-modal-btn');
+  const closeEditBtn2 = document.getElementById('close-edit-modal-btn-2');
+  if (closeEditBtn) closeEditBtn.addEventListener('click', closeEditModal);
+  if (closeEditBtn2) closeEditBtn2.addEventListener('click', closeEditModal);
+  
+  const editModalOverlay = document.getElementById('cozy-edit-modal');
+  if (editModalOverlay) {
+    editModalOverlay.addEventListener('click', (e) => {
+      if (e.target === editModalOverlay) closeEditModal();
+    });
+  }
+  
+  // Edit form submit handler
+  const editForm = document.getElementById('edit-track-form');
+  if (editForm) {
+    editForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      if (!currentEditingTrackId) return;
+      
+      const title = document.getElementById('edit-track-title').value.trim();
+      const album = document.getElementById('edit-track-album').value.trim();
+      const year = document.getElementById('edit-track-year').value.trim();
+      const genre = document.getElementById('edit-track-genre').value.trim();
+      
+      // Check if it is custom or built-in track
+      const track = tracks.find(t => t.trackId === currentEditingTrackId);
+      if (!track) return;
+      
+      if (track.isCustom) {
+        // Fetch full custom track from DB to preserve binary blobs
+        const transaction = cozyDB.transaction(['custom_tracks'], 'readwrite');
+        const store = transaction.objectStore('custom_tracks');
+        
+        store.get(currentEditingTrackId).onsuccess = async (event) => {
+          const customTrack = event.target.result;
+          if (customTrack) {
+            customTrack.trackName = title;
+            customTrack.collectionName = album;
+            customTrack.releaseDate = new Date(year, 0, 1).toISOString();
+            customTrack.primaryGenreName = genre;
+            
+            await saveCustomTrackToDB(customTrack);
+            await loadCustomTracksFromDB();
+            
+            resolveTracksList();
+            renderLibrary();
+            renderDashboardCatalog();
+            closeEditModal();
+            showToast("แก้ไขข้อมูลเพลงสำเร็จ! ✏️", `อัปเดตเพลง "${title}" เรียบร้อยแล้วค่ะ`);
+          }
+        };
+      } else {
+        // Edit is only supported for custom tracks, but to be extremely helpful, we can:
+        // Exclude the built-in track and clone it as a new custom track with modified metadata!
+        // Wait, for built-in track, we can display alert that metadata is write-protected or clone it.
+        // Let's just alert the user that built-in track info is write-protected for copyright authenticity.
+        alert("เพลงหลักของระบบมีลิขสิทธิ์รับรอง ข้อมูลจึงถูกล็อกไว้เพื่อป้องกันข้อผิดพลาดค่ะ (แก้ไขได้เฉพาะเพลงที่คุณอัพโหลดขึ้นมาเองนะคะ) 🌸");
+        closeEditModal();
+      }
+    });
+  }
+}
+
