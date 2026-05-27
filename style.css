@@ -2688,3 +2688,221 @@ body {
     display: none; /* Hide genre and year on mobile table layout to save horizontal space */
   }
 }
+
+
+/* ==========================================================================
+   Cozy Music Lounge - Premium Light Mode Theme Overrides
+   ========================================================================== */
+
+/* Theme Toggle Button styling */
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.theme-toggle-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-main);
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: var(--transition-smooth);
+  font-size: 1.1rem;
+}
+
+.theme-toggle-btn:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: rgba(255, 255, 255, 0.25);
+  transform: rotate(30deg) scale(1.06);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.25);
+}
+
+@media (max-width: 1050px) {
+  .header-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .search-wrapper {
+    flex-grow: 1;
+    width: auto !important;
+  }
+}
+
+/* Light Mode Core Variable Override */
+.light-mode {
+  --panel-border: 1px solid rgba(0, 0, 0, 0.06);
+  
+  /* Defaults (Late Night Rain - Light Mode) */
+  --bg-primary: #f2f4f8;
+  --bg-secondary: #ffffff;
+  --accent: #0284c7;
+  --accent-hover: #0369a1;
+  --accent-rgb: 2, 132, 199;
+  --panel-bg: rgba(255, 255, 255, 0.72);
+  --glow-color: rgba(2, 132, 199, 0.06);
+  --text-main: #0f172a;
+  --text-sub: #475569;
+  --accent-glow: 0 6px 20px rgba(2, 132, 199, 0.15);
+  --card-hover-bg: rgba(0, 0, 0, 0.02);
+}
+
+/* Light Mode - Cozy Café Override */
+.light-mode.theme-cafe {
+  --bg-primary: #FAF6F0;
+  --bg-secondary: #ffffff;
+  --accent: #b45309;
+  --accent-hover: #92400e;
+  --accent-rgb: 180, 83, 9;
+  --panel-bg: rgba(255, 255, 255, 0.72);
+  --glow-color: rgba(180, 83, 9, 0.06);
+  --text-main: #1c1917;
+  --text-sub: #57534e;
+  --accent-glow: 0 6px 20px rgba(180, 83, 9, 0.15);
+}
+
+/* Light Mode - Vintage Study Override */
+.light-mode.theme-study {
+  --bg-primary: #FCF7F2;
+  --bg-secondary: #ffffff;
+  --accent: #c2410c;
+  --accent-hover: #9a3412;
+  --accent-rgb: 194, 65, 12;
+  --panel-bg: rgba(255, 255, 255, 0.72);
+  --glow-color: rgba(194, 65, 12, 0.06);
+  --text-main: #2b1f1f;
+  --text-sub: #5c4e4e;
+  --accent-glow: 0 6px 20px rgba(194, 65, 12, 0.15);
+}
+
+/* Premium Light Mode UI Fixes */
+.light-mode .theme-toggle-btn {
+  background: rgba(0, 0, 0, 0.03) !important;
+  border-color: rgba(0, 0, 0, 0.06) !important;
+  color: var(--text-main) !important;
+}
+
+.light-mode .theme-toggle-btn:hover {
+  background: rgba(0, 0, 0, 0.06) !important;
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+/* Glass panel reflection in light mode */
+.light-mode .glass-panel::before {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.4) 0%, rgba(255, 255, 255, 0.05) 100%) !important;
+}
+
+/* Text selections in Light Mode */
+.light-mode ::selection {
+  background: rgba(var(--accent-rgb), 0.15);
+  color: var(--accent);
+}
+
+/* Dashboard Light Mode Styling */
+.light-mode .db-input {
+  background: rgba(255, 255, 255, 0.8) !important;
+  border-color: rgba(0, 0, 0, 0.1) !important;
+  color: #0f172a !important;
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.light-mode .db-input::placeholder {
+  color: #94a3b8 !important;
+}
+
+.light-mode .db-input:focus {
+  border-color: var(--accent) !important;
+  box-shadow: 
+    0 0 8px rgba(var(--accent-rgb), 0.15),
+    inset 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+}
+
+.light-mode .file-dropzone {
+  background: rgba(0, 0, 0, 0.015);
+  border-color: rgba(0, 0, 0, 0.1);
+}
+
+.light-mode .file-dropzone:hover {
+  background: rgba(var(--accent-rgb), 0.02);
+}
+
+.light-mode .catalog-table-wrapper {
+  background: rgba(255, 255, 255, 0.6);
+  border-color: rgba(0, 0, 0, 0.06);
+}
+
+.light-mode .catalog-table th {
+  background: rgba(0, 0, 0, 0.03);
+  color: #475569;
+  border-bottom-color: rgba(0, 0, 0, 0.08);
+}
+
+.light-mode .catalog-table td {
+  border-bottom-color: rgba(0, 0, 0, 0.04);
+}
+
+.light-mode .catalog-table tbody tr:hover {
+  background: rgba(0, 0, 0, 0.01);
+}
+
+.light-mode .catalog-tab {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.05);
+  color: #475569;
+}
+
+.light-mode .catalog-tab:hover {
+  background: rgba(0, 0, 0, 0.04);
+  color: #0f172a;
+}
+
+.light-mode .db-action-btn {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.05);
+  color: #475569;
+}
+
+.light-mode .stat-icon-wrapper {
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.05);
+}
+
+/* Turntable plate contrast adjustments in light mode */
+.light-mode .turntable {
+  background: rgba(255, 255, 255, 0.5) !important;
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 
+    0 15px 30px rgba(0,0,0,0.08),
+    inset 0 2px 5px rgba(255,255,255,0.7) !important;
+}
+
+/* Local track importer adjustments in light mode */
+.light-mode .local-import-zone {
+  border-color: rgba(0, 0, 0, 0.08) !important;
+  background: rgba(0, 0, 0, 0.01) !important;
+}
+
+.light-mode .local-import-zone:hover {
+  border-color: var(--accent) !important;
+  background: rgba(var(--accent-rgb), 0.01) !important;
+}
+
+/* Ambient sound channel items adjustments in light mode */
+.light-mode .ambient-channel {
+  background: rgba(0, 0, 0, 0.015) !important;
+  border-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* Time display adjustments in light mode */
+.light-mode .time-stamp {
+  color: #475569 !important;
+}
+
+/* Active song item overlay in library list in light mode */
+.light-mode .song-item.active {
+  background: rgba(var(--accent-rgb), 0.08) !important;
+}

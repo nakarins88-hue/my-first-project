@@ -28,6 +28,7 @@ let cozyDB = null;
 let customTracks = [];
 let hiddenTrackIds = [];
 const STORAGE_KEY_HIDDEN = 'jeff_bernat_hidden_tracks';
+let isLightMode = localStorage.getItem('jeff_bernat_light_mode') === 'true';
 let currentFilter = 'all'; // 'all' | 'favorites'
 let isShuffle = false;
 let isRepeat = false;
@@ -1216,6 +1217,9 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof killServiceWorkersAndCaches === 'function') killServiceWorkersAndCaches();
     if (typeof setupMediaSessionActions === 'function') setupMediaSessionActions();
     if (typeof initMobileNavigation === 'function') initMobileNavigation();
+
+    // --- Initialize Premium Dark/Light Mode Theme Toggle ---
+    if (typeof initThemeToggle === 'function') initThemeToggle();
 
     // --- Resilient Auto-fallback timer ---
     // If YouTube doesn't load/fails within 2.5 seconds, lock HTML5 preview player.
@@ -3099,3 +3103,39 @@ function setupDashboardEventListeners() {
   }
 }
 
+
+
+// --- 26. Premium Dark/Light Mode Theme Toggle Controller ---
+function initThemeToggle() {
+  console.log("Initializing Dark/Light Mode Theme Switcher...");
+  
+  const elThemeToggleBtn = document.getElementById('theme-toggle-btn');
+  if (elThemeToggleBtn) {
+    // 1. Hydrate theme state immediately on DOM load
+    if (isLightMode) {
+      document.body.classList.add('light-mode');
+      elThemeToggleBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
+    } else {
+      document.body.classList.remove('light-mode');
+      elThemeToggleBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
+    }
+    
+    // 2. Click transition listener
+    elThemeToggleBtn.addEventListener('click', () => {
+      isLightMode = !isLightMode;
+      localStorage.setItem('jeff_bernat_light_mode', isLightMode);
+      
+      if (isLightMode) {
+        document.body.classList.add('light-mode');
+        elThemeToggleBtn.innerHTML = '<i class="fa-solid fa-sun"></i>';
+        showToast("Light Mode ☀️", "สลับโหมดถนอมสายตากลางวันเรียบร้อยแล้วค่ะ");
+      } else {
+        document.body.classList.remove('light-mode');
+        elThemeToggleBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
+        showToast("Dark Mode 🌙", "สลับโหมดถนอมสายตากลางคืนเรียบร้อยแล้วค่ะ");
+      }
+    });
+    
+    console.log("Theme Toggle initialized successfully.");
+  }
+}
