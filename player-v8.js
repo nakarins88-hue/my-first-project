@@ -28,15 +28,21 @@ let cozyDB = null;
 let customTracks = [];
 let hiddenTrackIds = [];
 const STORAGE_KEY_HIDDEN = 'jeff_bernat_hidden_tracks';
+const STORAGE_KEY_THEME = 'jeff_bernat_mood_theme';
+const STORAGE_KEY_SESSION = 'jeff_bernat_session_preset';
 let isLightMode = localStorage.getItem('jeff_bernat_light_mode') === 'true';
 let currentFilter = 'all'; // 'all' | 'favorites'
 let isShuffle = false;
 let isRepeat = false;
-let theme = 'rain'; // 'rain' | 'cafe' | 'study'
+let theme = ['rain', 'cafe', 'study'].includes(localStorage.getItem(STORAGE_KEY_THEME)) ? localStorage.getItem(STORAGE_KEY_THEME) : 'rain'; // 'rain' | 'cafe' | 'study'
+let currentSessionPreset = localStorage.getItem(STORAGE_KEY_SESSION) || null;
+let ambientVisualIntensity = 1;
+let activeAccentRgb = '56, 189, 248'; // Cached active accent color to prevent layout thrashing in animation loop
 let progressPollInterval = null;
 let waveOffset = 0;
 let visualizerAnimId = null;
 let activeLyricTimestamps = [];
+let cozyToastTimer = null;
 
 // Audio Engine Caches & Settings
 let elEngineYoutube = null;
@@ -238,6 +244,7 @@ let elPlayerVolumeIcon = null;
 let elLyricsContainer = null;
 let elLibTabs = [];
 let elMoodBtns = [];
+let elSessionPresetBtns = [];
 let elAmbientCanvas = null;
 let elVisualizerCanvas = null;
 let elFloatingNotesContainer = null;
@@ -255,6 +262,41 @@ let ambientNodes = {
 };
 let channelVolumes = { rain: 0.3, cafe: 0.0, fireplace: 0.0 };
 let channelMutes = { rain: false, cafe: true, fireplace: true };
+
+const SESSION_PRESETS = {
+  'rainy-night': {
+    label: 'Rainy Night',
+    theme: 'rain',
+    volumes: { rain: 42, cafe: 0, fireplace: 8 },
+    visualIntensity: 1.15,
+    ambientOn: true,
+    toast: 'ฝนชัดขึ้น มีเตาผิงบาง ๆ ให้บรรยากาศกลางคืนอบอุ่น'
+  },
+  'cafe-focus': {
+    label: 'Cafe Focus',
+    theme: 'cafe',
+    volumes: { rain: 8, cafe: 34, fireplace: 0 },
+    visualIntensity: 1,
+    ambientOn: true,
+    toast: 'ร้านกาแฟเบา ๆ พร้อมเสียงฝนบางมากสำหรับทำงาน'
+  },
+  'study-glow': {
+    label: 'Study Glow',
+    theme: 'study',
+    volumes: { rain: 0, cafe: 8, fireplace: 44 },
+    visualIntensity: 1.25,
+    ambientOn: true,
+    toast: 'โหมดอ่านหนังสืออุ่น ๆ พร้อมประกายไฟนุ่มตา'
+  },
+  'pure-music': {
+    label: 'Pure Music',
+    theme: 'rain',
+    volumes: { rain: 0, cafe: 0, fireplace: 0 },
+    visualIntensity: 0.45,
+    ambientOn: false,
+    toast: 'ปิดเสียงบรรยากาศ เหลือแต่เพลงแบบสะอาด ๆ'
+  }
+};
 
 // --- 4. Premium Offline Playlist (Instant Load & Safe Fallback) ---
 const BACKUP_TRACKS = [
@@ -613,6 +655,15 @@ function updateEngineSelectorUI() {
   }
 }
 
+function isHtml5AudioEngine() {
+  return currentEngine === 'local' || currentEngine === 'itunes' || useFallbackAudio;
+}
+
+function getActiveDurationLabel(track) {
+  const hasFullTrack = !!(track && (track.localUrl || getLocalAudioUrl(track.trackName) || (isYtReady && !useFallbackAudio)));
+  return hasFullTrack ? 'Full' : '0:30';
+}
+
 function updatePlayerUIPlaying(playing) {
   if (elPlayBtn) elPlayBtn.innerHTML = playing ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>';
   if (elVinylRecord) {
@@ -961,7 +1012,7 @@ function startProgressPolling() {
     let currentTime = 0;
     let duration = 0;
     
-    if (useFallbackAudio) {
+    if (isHtml5AudioEngine()) {
       if (elMainAudio) {
         currentTime = elMainAudio.currentTime;
         duration = elMainAudio.duration || 30;
@@ -997,7 +1048,7 @@ function setProgress(e) {
   const width = elProgressContainer.clientWidth;
   const clickX = e.offsetX;
   
-  if (useFallbackAudio) {
+  if (isHtml5AudioEngine()) {
     if (elMainAudio && elMainAudio.duration > 0) {
       const newTime = (clickX / width) * elMainAudio.duration;
       elMainAudio.currentTime = newTime;
@@ -1049,7 +1100,7 @@ function loadLyrics(trackName) {
       line.setAttribute('data-time', lyric.time);
       
       line.addEventListener('click', () => {
-        if (useFallbackAudio) {
+        if (isHtml5AudioEngine()) {
           if (elMainAudio) {
             elMainAudio.currentTime = lyric.time;
             if (!isPlaying) playAudio();
@@ -1111,9 +1162,12 @@ function showToast(title = "Welcome to Cozy Lounge", desc = "คลิกปร�
   if (titleEl) titleEl.textContent = title;
   if (descEl) descEl.textContent = desc;
   elCozyToast.classList.add('active');
+
+  if (cozyToastTimer) clearTimeout(cozyToastTimer);
   
-  setTimeout(() => {
+  cozyToastTimer = setTimeout(() => {
     if (elCozyToast) elCozyToast.classList.remove('active');
+    cozyToastTimer = null;
   }, 6000);
 }
 
@@ -1183,6 +1237,7 @@ document.addEventListener('DOMContentLoaded', () => {
     elLyricsContainer = document.getElementById('lyrics-container');
     elLibTabs = document.querySelectorAll('.lib-tab');
     elMoodBtns = document.querySelectorAll('.mood-btn');
+    elSessionPresetBtns = document.querySelectorAll('.session-preset-btn');
     elAmbientCanvas = document.getElementById('ambient-canvas');
     elVisualizerCanvas = document.getElementById('player-visualizer');
     elFloatingNotesContainer = document.getElementById('floating-notes');
@@ -1220,6 +1275,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // --- Initialize Premium Dark/Light Mode Theme Toggle ---
     if (typeof initThemeToggle === 'function') initThemeToggle();
+
+    // --- Initialize one-tap mood + ambient session presets ---
+    if (typeof initCozySessionPresets === 'function') initCozySessionPresets();
+
+    // --- Hydrate cached active accent RGB value for visualizer performance ---
+    if (typeof updateActiveAccentRgb === 'function') updateActiveAccentRgb();
 
     // --- Resilient Auto-fallback timer ---
     // If YouTube doesn't load/fails within 2.5 seconds, lock HTML5 preview player.
@@ -1385,6 +1446,7 @@ function setupDOMEventListeners() {
     
     if (slider) {
       slider.addEventListener('input', (e) => {
+        clearCozySessionPreset();
         updateAmbientChannelVolume(soundKey, e.target.value);
         if (!isAmbientOn) toggleMasterAmbient();
       });
@@ -1392,6 +1454,7 @@ function setupDOMEventListeners() {
     
     if (muteBtn) {
       muteBtn.addEventListener('click', () => {
+        clearCozySessionPreset();
         toggleMuteAmbientChannel(soundKey);
         if (!isAmbientOn) toggleMasterAmbient();
       });
@@ -1428,7 +1491,7 @@ function setupDOMEventListeners() {
       const hasLocal = currentTrack && (currentTrack.localUrl || getLocalAudioUrl(currentTrack.trackName));
       if (hasLocal) {
         currentEngine = 'local';
-        useFallbackAudio = true;
+        useFallbackAudio = false;
         updateEngineSelectorUI();
         showToast("Engine: Local File 🎵", "สลับมาเล่นไฟล์คุณภาพสูงในเครื่องเรียบร้อยค่ะ");
         if (isPlaying) playAudio();
@@ -1529,7 +1592,7 @@ function renderLibrary() {
         <div class="song-item-title">${track.trackName}</div>
         <div class="song-item-album">${track.collectionName}</div>
       </div>
-      <div class="song-item-duration">${useFallbackAudio ? '0:30' : 'Full'}</div>
+      <div class="song-item-duration">${getActiveDurationLabel(track)}</div>
       <button class="song-item-heart ${isFavorite ? 'active' : ''}" data-id="${track.trackId}">
         <i class="${isFavorite ? 'fa-solid' : 'fa-regular'} fa-heart"></i>
       </button>
@@ -1789,10 +1852,99 @@ function toggleFavorite(id, heartBtnElement) {
   }
 }
 
-// --- 18. Environment Theme & Weather Particles Engine ---
-function changeMoodTheme(targetTheme) {
+// --- 18. Environment Theme, Session Presets & Weather Particles Engine ---
+function setBodyThemeClass(targetTheme) {
+  if (!elBody) return;
+  elBody.classList.remove('theme-rain', 'theme-cafe', 'theme-study');
+  elBody.classList.add(`theme-${targetTheme}`);
+}
+
+function updateSessionPresetUI() {
+  elSessionPresetBtns.forEach(btn => {
+    const isActive = btn.getAttribute('data-session-preset') === currentSessionPreset;
+    btn.classList.toggle('active', isActive);
+    btn.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+  });
+
+  if (elBody) {
+    if (currentSessionPreset) {
+      elBody.dataset.session = currentSessionPreset;
+    } else {
+      delete elBody.dataset.session;
+    }
+  }
+}
+
+function clearCozySessionPreset() {
+  if (!currentSessionPreset) return;
+  currentSessionPreset = null;
+  ambientVisualIntensity = 1;
+  localStorage.removeItem(STORAGE_KEY_SESSION);
+  updateSessionPresetUI();
+  resetAmbientCanvas();
+}
+
+function applyCozySessionPreset(presetKey, options = {}) {
+  const preset = SESSION_PRESETS[presetKey];
+  if (!preset) return;
+
+  currentSessionPreset = presetKey;
+  ambientVisualIntensity = preset.visualIntensity || 1;
+  localStorage.setItem(STORAGE_KEY_SESSION, presetKey);
+
+  changeMoodTheme(preset.theme, { keepSessionPreset: true, skipDefaultVolumes: true });
+
+  Object.entries(preset.volumes).forEach(([soundKey, value]) => {
+    updateAmbientChannelVolume(soundKey, value);
+  });
+
+  if (preset.ambientOn && options.activateAmbient && !isAmbientOn) {
+    toggleMasterAmbient();
+  } else if (!preset.ambientOn && isAmbientOn) {
+    toggleMasterAmbient();
+  }
+
+  updateSessionPresetUI();
+  resetAmbientCanvas();
+
+  if (options.notify !== false) {
+    showToast(`Session: ${preset.label}`, preset.toast);
+  }
+}
+
+function initCozySessionPresets() {
+  elSessionPresetBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      applyCozySessionPreset(btn.getAttribute('data-session-preset'), {
+        activateAmbient: true,
+        notify: true
+      });
+    });
+  });
+
+  if (currentSessionPreset && !SESSION_PRESETS[currentSessionPreset]) {
+    currentSessionPreset = null;
+    localStorage.removeItem(STORAGE_KEY_SESSION);
+  }
+
+  if (currentSessionPreset && SESSION_PRESETS[currentSessionPreset]) {
+    applyCozySessionPreset(currentSessionPreset, { activateAmbient: false, notify: false });
+    return;
+  }
+
+  const savedTheme = localStorage.getItem(STORAGE_KEY_THEME);
+  if (savedTheme && ['rain', 'cafe', 'study'].includes(savedTheme)) {
+    changeMoodTheme(savedTheme, { keepSessionPreset: true });
+  } else {
+    setBodyThemeClass(theme);
+  }
+  updateSessionPresetUI();
+}
+
+function changeMoodTheme(targetTheme, options = {}) {
   theme = targetTheme;
-  if (elBody) elBody.className = `theme-${targetTheme}`;
+  localStorage.setItem(STORAGE_KEY_THEME, targetTheme);
+  setBodyThemeClass(targetTheme);
   
   elMoodBtns.forEach(btn => {
     if (btn.getAttribute('data-theme') === targetTheme) {
@@ -1802,19 +1954,31 @@ function changeMoodTheme(targetTheme) {
     }
   });
 
-  if (targetTheme === 'rain') {
-    updateAmbientChannelVolume('rain', 35);
-    updateAmbientChannelVolume('cafe', 0);
-    updateAmbientChannelVolume('fireplace', 0);
-  } else if (targetTheme === 'cafe') {
-    updateAmbientChannelVolume('rain', 0);
-    updateAmbientChannelVolume('cafe', 35);
-    updateAmbientChannelVolume('fireplace', 0);
-  } else if (targetTheme === 'study') {
-    updateAmbientChannelVolume('rain', 0);
-    updateAmbientChannelVolume('cafe', 0);
-    updateAmbientChannelVolume('fireplace', 45);
+  if (!options.skipDefaultVolumes) {
+    if (targetTheme === 'rain') {
+      updateAmbientChannelVolume('rain', 35);
+      updateAmbientChannelVolume('cafe', 0);
+      updateAmbientChannelVolume('fireplace', 0);
+    } else if (targetTheme === 'cafe') {
+      updateAmbientChannelVolume('rain', 0);
+      updateAmbientChannelVolume('cafe', 35);
+      updateAmbientChannelVolume('fireplace', 0);
+    } else if (targetTheme === 'study') {
+      updateAmbientChannelVolume('rain', 0);
+      updateAmbientChannelVolume('cafe', 0);
+      updateAmbientChannelVolume('fireplace', 45);
+    }
   }
+
+  if (!options.keepSessionPreset) {
+    currentSessionPreset = null;
+    ambientVisualIntensity = 1;
+    localStorage.removeItem(STORAGE_KEY_SESSION);
+    updateSessionPresetUI();
+  }
+
+  // Update cached active accent color!
+  if (typeof updateActiveAccentRgb === 'function') updateActiveAccentRgb();
 
   resetAmbientCanvas();
 }
@@ -1842,7 +2006,8 @@ function resetAmbientCanvas() {
   if (animationFrameId) cancelAnimationFrame(animationFrameId);
   if (!elAmbientCanvas) return;
   
-  const count = theme === 'rain' ? 80 : theme === 'cafe' ? 25 : 35;
+  const baseCount = theme === 'rain' ? 80 : theme === 'cafe' ? 25 : 35;
+  const count = Math.max(12, Math.round(baseCount * ambientVisualIntensity));
   for (let i = 0; i < count; i++) {
     particles.push(createParticle(true));
   }
@@ -1859,8 +2024,8 @@ function createParticle(randomY = false) {
       x: Math.random() * w,
       y: randomY ? Math.random() * h : -20,
       length: 15 + Math.random() * 25,
-      speed: 10 + Math.random() * 8,
-      opacity: 0.1 + Math.random() * 0.25,
+      speed: (10 + Math.random() * 8) * Math.max(0.7, ambientVisualIntensity),
+      opacity: (0.1 + Math.random() * 0.25) * Math.min(1.25, ambientVisualIntensity),
       angle: 4 + Math.random() * 2
     };
   } else if (theme === 'cafe') {
@@ -1868,8 +2033,8 @@ function createParticle(randomY = false) {
       x: Math.random() * w,
       y: randomY ? Math.random() * h : h + 20,
       radius: 2 + Math.random() * 5,
-      speed: 0.4 + Math.random() * 0.6,
-      opacity: 0.05 + Math.random() * 0.15,
+      speed: (0.4 + Math.random() * 0.6) * Math.max(0.7, ambientVisualIntensity),
+      opacity: (0.05 + Math.random() * 0.15) * Math.min(1.3, ambientVisualIntensity),
       wobble: Math.random() * 2,
       wobbleSpeed: 0.01 + Math.random() * 0.02
     };
@@ -1878,8 +2043,8 @@ function createParticle(randomY = false) {
       x: Math.random() * w,
       y: randomY ? Math.random() * h : h + 20,
       radius: 1 + Math.random() * 3,
-      speed: 0.8 + Math.random() * 1.2,
-      opacity: 0.1 + Math.random() * 0.3,
+      speed: (0.8 + Math.random() * 1.2) * Math.max(0.7, ambientVisualIntensity),
+      opacity: (0.1 + Math.random() * 0.3) * Math.min(1.3, ambientVisualIntensity),
       flicker: Math.random() * Math.PI,
       color: `hsl(${15 + Math.random() * 20}, 95%, ${50 + Math.random() * 20}%)`
     };
@@ -2233,6 +2398,18 @@ function toggleMasterAmbient() {
 }
 
 // --- 20. Premium Simulated Sound Wave Visualizer Loop ---
+function updateActiveAccentRgb() {
+  if (isLightMode) {
+    if (theme === 'rain') activeAccentRgb = '2, 132, 199';
+    else if (theme === 'cafe') activeAccentRgb = '180, 83, 9';
+    else if (theme === 'study') activeAccentRgb = '194, 65, 12';
+  } else {
+    if (theme === 'rain') activeAccentRgb = '56, 189, 248';
+    else if (theme === 'cafe') activeAccentRgb = '234, 179, 8';
+    else if (theme === 'study') activeAccentRgb = '249, 115, 22';
+  }
+}
+
 function drawPlayerVisualizer() {
   visualizerAnimId = requestAnimationFrame(drawPlayerVisualizer);
   if (!elVisualizerCanvas) return;
@@ -2256,9 +2433,9 @@ function drawPlayerVisualizer() {
     }
     
     const grad = canvasCtx.createLinearGradient(0, height, 0, height - baseHeight);
-    grad.addColorStop(0, `rgba(var(--accent-rgb), 0.04)`);
-    grad.addColorStop(0.5, `rgba(var(--accent-rgb), 0.22)`);
-    grad.addColorStop(1, `rgba(var(--accent-rgb), 0.48)`);
+    grad.addColorStop(0, `rgba(${activeAccentRgb}, 0.04)`);
+    grad.addColorStop(0.5, `rgba(${activeAccentRgb}, 0.22)`);
+    grad.addColorStop(1, `rgba(${activeAccentRgb}, 0.48)`);
     
     canvasCtx.fillStyle = grad;
     canvasCtx.fillRect(i * barWidth, height - baseHeight, barWidth - 4, baseHeight);

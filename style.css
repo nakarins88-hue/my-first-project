@@ -120,6 +120,36 @@ body {
   transition: background 1s ease;
 }
 
+body[data-session="rainy-night"] .ambient-glow,
+body[data-session="cafe-focus"] .ambient-glow,
+body[data-session="study-glow"] .ambient-glow {
+  animation: sessionGlowDrift 8s ease-in-out infinite alternate;
+}
+
+body[data-session="pure-music"] .ambient-glow {
+  opacity: 0.55;
+  filter: saturate(0.75);
+}
+
+body[data-session="rainy-night"] .player-panel,
+body[data-session="cafe-focus"] .player-panel,
+body[data-session="study-glow"] .player-panel {
+  box-shadow:
+    0 16px 42px rgba(0, 0, 0, 0.28),
+    0 0 34px rgba(var(--accent-rgb), 0.12);
+}
+
+@keyframes sessionGlowDrift {
+  0% {
+    transform: translate(-50%, -50%) scale(0.96);
+    opacity: 0.82;
+  }
+  100% {
+    transform: translate(-49%, -51%) scale(1.04);
+    opacity: 1;
+  }
+}
+
 /* Floating Music Notes Animation */
 .floating-notes {
   position: fixed;
@@ -374,6 +404,85 @@ body {
   display: flex;
   flex-direction: column;
   gap: 6px;
+}
+
+.session-presets {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 2px;
+}
+
+.session-preset-label {
+  color: var(--text-sub);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.session-preset-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.session-preset-btn {
+  min-height: 38px;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  color: var(--text-sub);
+  font-family: var(--font-sans);
+  font-size: 0.72rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 8px 9px;
+  transition: transform 0.2s ease, border-color 0.2s ease, background 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+  white-space: nowrap;
+}
+
+.session-preset-btn i {
+  color: var(--accent);
+  font-size: 0.82rem;
+}
+
+.session-preset-btn:hover {
+  transform: translateY(-2px);
+  color: var(--text-main);
+  border-color: rgba(var(--accent-rgb), 0.3);
+  background: rgba(var(--accent-rgb), 0.06);
+}
+
+.session-preset-btn.active {
+  color: var(--accent);
+  border-color: rgba(var(--accent-rgb), 0.35);
+  background: rgba(var(--accent-rgb), 0.13);
+  box-shadow: 0 8px 18px rgba(var(--accent-rgb), 0.12);
+}
+
+.session-preset-btn.active i {
+  animation: presetIconBob 2.2s ease-in-out infinite;
+}
+
+@keyframes presetIconBob {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-2px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .session-preset-btn.active i,
+  body[data-session] .ambient-glow {
+    animation: none !important;
+  }
 }
 
 .channel-info {
@@ -1491,6 +1600,9 @@ body {
   }
   .lounge-sidebar-left {
     gap: 16px;
+  }
+  .session-preset-grid {
+    grid-template-columns: 1fr;
   }
 }
 
@@ -2895,6 +3007,24 @@ body {
 .light-mode .ambient-channel {
   background: rgba(0, 0, 0, 0.015) !important;
   border-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+.light-mode .session-preset-btn {
+  background: rgba(0, 0, 0, 0.025);
+  border-color: rgba(0, 0, 0, 0.08);
+  color: var(--text-sub);
+}
+
+.light-mode .session-preset-btn:hover {
+  background: rgba(var(--accent-rgb), 0.06);
+  border-color: rgba(var(--accent-rgb), 0.25);
+  color: var(--text-main);
+}
+
+.light-mode .session-preset-btn.active {
+  background: rgba(var(--accent-rgb), 0.1);
+  border-color: rgba(var(--accent-rgb), 0.3);
+  box-shadow: 0 8px 18px rgba(var(--accent-rgb), 0.1);
 }
 
 /* Time display adjustments in light mode */

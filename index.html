@@ -42,7 +42,7 @@
   <!-- FontAwesome for Premium Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Core Stylesheet -->
-  <link rel="stylesheet" href="style.css?v=12">
+  <link rel="stylesheet" href="style.css?v=13">
 </head>
 <body class="theme-rain">
   <!-- Background Canvas for Particles/Rain/Embers -->
@@ -132,6 +132,28 @@
                 <button class="channel-mute-btn muted" title="Mute/Unmute" aria-label="ปิดหรือเปิดเสียงเตาผิง"><i class="fa-solid fa-volume-xmark"></i></button>
                 <input type="range" class="volume-slider" min="0" max="100" value="0">
               </div>
+            </div>
+          </div>
+
+          <div class="session-presets" aria-label="Cozy session presets">
+            <div class="session-preset-label">Cozy Sessions</div>
+            <div class="session-preset-grid">
+              <button type="button" class="session-preset-btn" data-session-preset="rainy-night" aria-pressed="false" title="Rainy Night session">
+                <i class="fa-solid fa-cloud-moon-rain"></i>
+                <span>Rainy Night</span>
+              </button>
+              <button type="button" class="session-preset-btn" data-session-preset="cafe-focus" aria-pressed="false" title="Cafe Focus session">
+                <i class="fa-solid fa-mug-hot"></i>
+                <span>Cafe Focus</span>
+              </button>
+              <button type="button" class="session-preset-btn" data-session-preset="study-glow" aria-pressed="false" title="Study Glow session">
+                <i class="fa-solid fa-book-open-reader"></i>
+                <span>Study Glow</span>
+              </button>
+              <button type="button" class="session-preset-btn" data-session-preset="pure-music" aria-pressed="false" title="Pure Music session">
+                <i class="fa-solid fa-headphones"></i>
+                <span>Pure Music</span>
+              </button>
             </div>
           </div>
           
@@ -552,6 +574,6 @@
   </div>
 
   <!-- Main JavaScript File -->
-  <script src="player-v8.js?v=12"></script>
+  <script src="player-v8.js?v=13"></script>
 </body>
 </html>
