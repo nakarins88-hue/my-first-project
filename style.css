@@ -2636,6 +2636,18 @@ body {
     border: none;
     padding: 16px;
     gap: 15px;
+    overflow-y: auto !important; /* Enable vertical scrolling for modal on mobile */
+  }
+  
+  .db-header {
+    position: relative;
+    padding-right: 48px; /* Prevent close button overlap */
+  }
+  
+  .db-close-btn {
+    position: absolute;
+    right: 0;
+    top: 0;
   }
   
   .db-stats-grid {
@@ -2664,10 +2676,15 @@ body {
     width: 100%;
   }
 
+  .catalog-table-wrapper {
+    overflow-x: auto !important; /* Enable horizontal scrolling for catalog table */
+    -webkit-overflow-scrolling: touch;
+  }
+
   .catalog-table th:nth-child(4),
   .catalog-table td:nth-child(4),
   .catalog-table th:nth-child(5),
   .catalog-table td:nth-child(5) {
-    display: none; /* Hide genre and year on mobile table layout */
+    display: none; /* Hide genre and year on mobile table layout to save horizontal space */
   }
 }
