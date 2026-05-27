@@ -1352,8 +1352,42 @@ function setupDOMEventListeners() {
     });
 
     elMainAudio.addEventListener('ended', () => {
-      console.log("Audio track ended. Advancing to next track.");
-      nextTrack(true); // Force auto-advance play!
+      console.log("Audio track ended.");
+      if (isRepeat) {
+        // Repeat mode: replay the same track from the beginning
+        elMainAudio.currentTime = 0;
+        elMainAudio.play().catch(e => console.warn("Repeat play failed:", e));
+      } else {
+        nextTrack(true); // Force auto-advance play!
+      }
+    });
+
+    elMainAudio.addEventListener('error', (e) => {
+      console.warn("HTML5 Audio error occurred:", e);
+      const currentTrack = tracks[currentTrackIndex];
+      if (currentEngine === 'local') {
+        // Local file failed (e.g., 404), try YouTube fallback
+        if (isYtReady && !useFallbackAudio) {
+          console.log("Local file unavailable, falling back to YouTube engine.");
+          currentEngine = 'youtube';
+          updateEngineSelectorUI();
+          if (isPlaying) playAudio();
+        } else if (currentTrack && currentTrack.previewUrl) {
+          // Fall back to iTunes preview
+          console.log("Local file unavailable, falling back to iTunes preview.");
+          currentEngine = 'itunes';
+          useFallbackAudio = true;
+          updateEngineSelectorUI();
+          if (isPlaying) playAudio();
+        } else {
+          showToast("Audio Error ⚠️", "ไม่สามารถเล่นเพลงนี้ได้ กำลังข้ามไปเพลงถัดไปค่ะ");
+          nextTrack(true);
+        }
+      } else {
+        // iTunes preview failed, skip to next
+        showToast("Audio Error ⚠️", "ไม่สามารถเล่นเพลงนี้ได้ กำลังข้ามไปเพลงถัดไปค่ะ");
+        nextTrack(true);
+      }
     });
   }
 
@@ -1364,7 +1398,7 @@ function setupDOMEventListeners() {
     });
   }
 
-  if (elNextBtn) elNextBtn.addEventListener('click', nextTrack);
+  if (elNextBtn) elNextBtn.addEventListener('click', () => nextTrack());
   if (elPrevBtn) elPrevBtn.addEventListener('click', prevTrack);
   
   if (elShuffleBtn) {
@@ -3311,6 +3345,9 @@ function initThemeToggle() {
         elThemeToggleBtn.innerHTML = '<i class="fa-solid fa-moon"></i>';
         showToast("Dark Mode 🌙", "สลับโหมดถนอมสายตากลางคืนเรียบร้อยแล้วค่ะ");
       }
+      
+      // Refresh cached accent color for the visualizer to match the new mode
+      if (typeof updateActiveAccentRgb === 'function') updateActiveAccentRgb();
     });
     
     console.log("Theme Toggle initialized successfully.");
