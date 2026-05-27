@@ -2906,3 +2906,166 @@ body {
 .light-mode .song-item.active {
   background: rgba(var(--accent-rgb), 0.08) !important;
 }
+
+
+/* ==========================================================================
+   Premium Interactive Enhancements: Smooth Scroll & Dynamic Hover Effects
+   ========================================================================== */
+
+/* 1. Global Page smooth scrolling for all internal anchors */
+html {
+  scroll-behavior: smooth !important;
+}
+
+/* 2. Glass Panel elevation and deep fluid shadows on hover */
+.glass-panel {
+  transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              box-shadow 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              border-color 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              background-color 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.glass-panel:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 25px 50px rgba(0, 0, 0, 0.35);
+  border-color: rgba(var(--accent-rgb), 0.25);
+}
+
+/* De-elevating main player deck, full layouts, and pop-up modals */
+.lounge-container > .glass-panel:hover,
+.lounge-main-player:hover,
+.lyrics-widget:hover,
+.cozy-dashboard-modal:hover {
+  transform: none !important;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25) !important;
+  border-color: var(--panel-border) !important;
+}
+
+/* 3. Ambient Channel row micro-animations */
+.ambient-channel {
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              background 0.3s ease, 
+              border-color 0.3s ease !important;
+}
+
+.ambient-channel:hover {
+  transform: translateX(4px) scale(1.01);
+  background: rgba(255, 255, 255, 0.05) !important;
+  border-color: rgba(var(--accent-rgb), 0.2) !important;
+}
+
+.light-mode .ambient-channel:hover {
+  background: rgba(0, 0, 0, 0.025) !important;
+  border-color: rgba(var(--accent-rgb), 0.2) !important;
+}
+
+/* 4. Library List item sliding highlight */
+.song-item {
+  transition: transform 0.3s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              background-color 0.3s ease, 
+              border-color 0.3s ease,
+              box-shadow 0.3s ease !important;
+}
+
+.song-item:hover {
+  transform: translateX(6px) scale(1.015);
+  background: var(--card-hover-bg) !important;
+  border-color: rgba(255, 255, 255, 0.05) !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+}
+
+.light-mode .song-item:hover {
+  background: rgba(0, 0, 0, 0.02) !important;
+  border-color: rgba(0, 0, 0, 0.04) !important;
+}
+
+/* 5. Button and Knobs Dynamic Hover Scales */
+
+/* Mood buttons pop and glow */
+.mood-btn {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+.mood-btn:hover {
+  transform: scale(1.05) translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.18);
+  color: var(--text-main) !important;
+}
+
+.mood-btn:active {
+  transform: scale(0.96) translateY(0);
+}
+
+/* Control buttons glow and text shadow */
+.control-btn {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+.control-btn:hover {
+  transform: scale(1.15);
+  color: var(--accent) !important;
+  text-shadow: 0 0 10px rgba(var(--accent-rgb), 0.5);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.control-btn:active {
+  transform: scale(0.9);
+}
+
+.light-mode .control-btn:hover {
+  background: rgba(0, 0, 0, 0.03);
+}
+
+/* Center main play-pause button bouncy scale */
+.play-pause-btn {
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275) !important;
+}
+
+.play-pause-btn:hover {
+  transform: scale(1.12) !important;
+  box-shadow: 0 8px 25px rgba(var(--accent-rgb), 0.4) !important;
+}
+
+.play-pause-btn:active {
+  transform: scale(0.92) !important;
+}
+
+/* Side media options buttons */
+.sub-btn {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+.sub-btn:hover {
+  transform: scale(1.15) rotate(8deg);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+  color: var(--text-main) !important;
+}
+
+.sub-btn:active {
+  transform: scale(0.92);
+}
+
+/* Core Lounge buttons (Manage, Favs, Tabs) */
+.lounge-btn, .db-action-btn, .catalog-tab, .lib-tab {
+  transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1) !important;
+}
+
+.lounge-btn:hover, .db-action-btn:hover {
+  transform: translateY(-2px) scale(1.02);
+  box-shadow: 0 6px 15px rgba(var(--accent-rgb), 0.25);
+}
+
+.lounge-btn:active, .db-action-btn:active {
+  transform: translateY(0) scale(0.98);
+}
+
+.catalog-tab:hover, .lib-tab:hover {
+  transform: translateY(-1.5px);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+}
+
+/* Volume sliders scale transition */
+.volume-slider::-webkit-slider-thumb {
+  transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), 
+              background-color 0.2s ease !important;
+}
