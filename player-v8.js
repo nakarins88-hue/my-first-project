@@ -692,12 +692,26 @@ function updatePlayerUIPlaying(playing) {
   }
 }
 
-function importLocalTracks(files) {
-  let hasAsyncPath = false;
+async function importLocalTracks(files) {
+  if (!files || files.length === 0) return;
   
-  Array.from(files).forEach(file => {
+  showToast("กำลังนำเข้าไฟล์... ⏳", `กำลังเตรียมนำเข้าไฟล์เพลง ${files.length} ไฟล์ค่ะ`);
+  
+  const filesArray = Array.from(files);
+  let matchedCount = 0;
+  let addedCount = 0;
+  let lastNewTrackId = null;
+  
+  for (let file of filesArray) {
     const objectURL = URL.createObjectURL(file);
     const fileNameClean = file.name.toLowerCase().replace(/[^a-z0-9]/g, '');
+    
+    // Check if audio file. Check file type and file extension fallback for empty MIME types (common on some Windows systems)
+    const isAudio = file.type.startsWith('audio/') || /\.(mp3|m4a|wav|ogg|flac|aac|wma)$/i.test(file.name);
+    if (!isAudio) {
+      console.warn("Skipping non-audio file during import:", file.name);
+      continue;
+    }
     
     // Check if it matches any existing tracks in our list
     let matchedIdx = tracks.findIndex(t => {
@@ -708,11 +722,15 @@ function importLocalTracks(files) {
     if (matchedIdx !== -1) {
       tracks[matchedIdx].localUrl = objectURL;
       tracks[matchedIdx].previewUrl = objectURL; // support preview fallback using the local file!
-      showToast("นำเข้าเพลงสำเร็จ! 🎵", `เชื่อมโยงไฟล์กับเพลง "${tracks[matchedIdx].trackName}" แล้วค่ะ`);
-      loadTrack(matchedIdx);
+      matchedCount++;
+      
+      if (filesArray.length === 1) {
+        loadTrack(matchedIdx);
+      }
     } else {
       const nameWithoutExt = file.name.replace(/\.[^/.]+$/, "");
       const newTrackId = 'custom_' + Date.now() + Math.round(Math.random() * 100);
+      lastNewTrackId = newTrackId;
       
       const customTrack = {
         trackId: newTrackId,
@@ -726,44 +744,28 @@ function importLocalTracks(files) {
         isCustom: true
       };
       
-      if (typeof saveCustomTrackToDB === 'function' && typeof loadCustomTracksFromDB === 'function') {
-        hasAsyncPath = true;
-        saveCustomTrackToDB(customTrack)
-          .then(() => loadCustomTracksFromDB())
-          .then(() => {
-            resolveTracksList();
-            renderLibrary();
-            renderAlbumShelf();
-            
-            // Find active index of newly created track
-            const activeIdx = tracks.findIndex(t => t.trackId === newTrackId);
-            if (activeIdx !== -1) {
-              loadTrack(activeIdx);
-              playAudio();
-            }
-            showToast("เพิ่มเพลงสำเร็จ! 🎵", `จัดเก็บเพลง "${nameWithoutExt}" เข้าคลังแบบออฟไลน์เรียบร้อยแล้วค่ะ`);
-          })
-          .catch(err => {
-            console.error("Auto import save failed:", err);
-            // Fallback to temporary session track if IndexedDB fails
-            const fallbackTrack = {
-              trackId: newTrackId,
-              trackName: nameWithoutExt,
-              collectionName: "อิมพอร์ตชั่วคราว (Session Custom)",
-              artworkUrl100: "default_cover.png",
-              previewUrl: objectURL,
-              localUrl: objectURL,
-              releaseDate: new Date().toISOString(),
-              primaryGenreName: "Local Audio",
-              trackViewUrl: "#",
-              isCustom: true
-            };
-            tracks.push(fallbackTrack);
-            renderLibrary();
-            renderAlbumShelf();
-            loadTrack(tracks.length - 1);
-            playAudio();
-          });
+      if (typeof saveCustomTrackToDB === 'function') {
+        try {
+          await saveCustomTrackToDB(customTrack);
+          addedCount++;
+        } catch (err) {
+          console.error("Auto import save failed for file:", file.name, err);
+          // Fallback to temporary session track if IndexedDB fails
+          const fallbackTrack = {
+            trackId: newTrackId,
+            trackName: nameWithoutExt,
+            collectionName: "อิมพอร์ตชั่วคราว (Session Custom)",
+            artworkUrl100: "default_cover.png",
+            previewUrl: objectURL,
+            localUrl: objectURL,
+            releaseDate: new Date().toISOString(),
+            primaryGenreName: "Local Audio",
+            trackViewUrl: "#",
+            isCustom: true
+          };
+          tracks.push(fallbackTrack);
+          addedCount++;
+        }
       } else {
         // Fallback
         const fallbackTrack = {
@@ -779,15 +781,45 @@ function importLocalTracks(files) {
           isCustom: true
         };
         tracks.push(fallbackTrack);
-        loadTrack(tracks.length - 1);
+        addedCount++;
       }
     }
-  });
+  }
   
-  if (!hasAsyncPath) {
-    renderLibrary();
-    renderAlbumShelf();
-    playAudio();
+  // Reload custom tracks from IndexedDB once
+  if (typeof loadCustomTracksFromDB === 'function') {
+    try {
+      await loadCustomTracksFromDB();
+    } catch (e) {
+      console.error("Failed to load custom tracks after batch import:", e);
+    }
+  }
+  
+  // Resolve and render all UI elements once
+  resolveTracksList();
+  renderLibrary();
+  renderAlbumShelf();
+  updateDashboardStats();
+  if (typeof renderDashboardCatalog === 'function') {
+    renderDashboardCatalog();
+  }
+  
+  if (filesArray.length === 1) {
+    if (matchedCount > 0) {
+      showToast("นำเข้าเพลงสำเร็จ! 🎵", `เชื่อมโยงไฟล์กับเพลงหลักเรียบร้อยแล้วค่ะ`);
+    } else if (addedCount > 0 && lastNewTrackId) {
+      const activeIdx = tracks.findIndex(t => t.trackId === lastNewTrackId);
+      if (activeIdx !== -1) {
+        loadTrack(activeIdx);
+        playAudio();
+      }
+      showToast("เพิ่มเพลงสำเร็จ! 🎉", `บันทึกเพลงเข้าคลังพร้อมเล่นออฟไลน์แล้วค่ะ`);
+    }
+  } else {
+    showToast("นำเข้าเสร็จสิ้น! 🎵", `นำเข้าไฟล์เพลงสำเร็จทั้งหมด ${matchedCount + addedCount} เพลงค่ะ`);
+    if (addedCount > 0 || matchedCount > 0) {
+      playAudio();
+    }
   }
 }
 
@@ -809,10 +841,12 @@ function loadTrack(index) {
   
   if (elCurrentTimeDisplay) elCurrentTimeDisplay.textContent = "0:00";
   
-  // Set default local url if present in directory
-  const localUrl = getLocalAudioUrl(track.trackName);
-  if (localUrl) {
-    track.localUrl = localUrl;
+  // Set default local url if present in directory and not already a custom blob URL
+  if (!track.localUrl || !track.localUrl.startsWith('blob:')) {
+    const localUrl = getLocalAudioUrl(track.trackName);
+    if (localUrl) {
+      track.localUrl = localUrl;
+    }
   }
   
   // Select best audio engine available
@@ -2699,6 +2733,10 @@ function initMobileNavigation() {
 function resolveTracksList() {
   console.log("Resolving tracks list... Base count:", allBaseTracks.length);
   
+  // Cache the currently active track ID to preserve track selection during re-sorts
+  const activeTrack = tracks[currentTrackIndex];
+  const activeTrackId = activeTrack ? activeTrack.trackId : null;
+  
   // 1. Filter out hidden/deleted built-in tracks
   let resolved = allBaseTracks.filter(t => !hiddenTrackIds.includes(t.trackId));
   
@@ -2722,6 +2760,14 @@ function resolveTracksList() {
   
   tracks = resolved;
   console.log("Tracks list resolved. Active count:", tracks.length);
+  
+  // Sync the currentTrackIndex with the cached active track ID
+  if (activeTrackId) {
+    const newIdx = tracks.findIndex(t => t.trackId === activeTrackId);
+    if (newIdx !== -1) {
+      currentTrackIndex = newIdx;
+    }
+  }
 }
 
 // 1. Initialize IndexedDB
@@ -2765,8 +2811,12 @@ async function loadCustomTracksFromDB() {
     };
     
     request.onsuccess = (e) => {
-      // Clear previously active base64 / blob URLs to prevent memory leak
+      const activeTrack = tracks[currentTrackIndex];
+      const activeTrackId = activeTrack ? activeTrack.trackId : null;
+      
+      // Clear previously active base64 / blob URLs to prevent memory leak EXCEPT for the currently playing track
       customTracks.forEach(t => {
+        if (t.trackId === activeTrackId) return; // Skip active track to prevent audio interruption
         if (t.localUrl && t.localUrl.startsWith('blob:')) {
           URL.revokeObjectURL(t.localUrl);
         }
@@ -2777,14 +2827,21 @@ async function loadCustomTracksFromDB() {
       
       const results = request.result || [];
       customTracks = results.map(track => {
-        // Hydrate Blob references to browser-playable Blob URLs!
-        if (track.audioBlob) {
-          const url = URL.createObjectURL(track.audioBlob);
-          track.previewUrl = url;
-          track.localUrl = url;
-        }
-        if (track.artworkBlob) {
-          track.artworkUrl100 = URL.createObjectURL(track.artworkBlob);
+        if (track.trackId === activeTrackId && activeTrack && activeTrack.localUrl) {
+          // Re-use active track's working Blob URLs to avoid disrupting active playback
+          track.previewUrl = activeTrack.previewUrl;
+          track.localUrl = activeTrack.localUrl;
+          track.artworkUrl100 = activeTrack.artworkUrl100;
+        } else {
+          // Hydrate Blob references to browser-playable Blob URLs!
+          if (track.audioBlob) {
+            const url = URL.createObjectURL(track.audioBlob);
+            track.previewUrl = url;
+            track.localUrl = url;
+          }
+          if (track.artworkBlob) {
+            track.artworkUrl100 = URL.createObjectURL(track.artworkBlob);
+          }
         }
         track.isCustom = true;
         return track;
@@ -3048,10 +3105,32 @@ function renderDashboardCatalog() {
       btnDel.addEventListener('click', () => {
         if (isCustom) {
           if (confirm(`คุณต้องการลบเพลง "${track.trackName}" ออกถาวรใช่หรือไม่?`)) {
+            // Check if the deleted song is the currently playing one
+            const isPlayingDeletedTrack = (tracks[currentTrackIndex] && tracks[currentTrackIndex].trackId === track.trackId);
+            
             deleteCustomTrackFromDB(track.trackId)
               .then(() => loadCustomTracksFromDB())
               .then(() => {
                 resolveTracksList();
+                
+                if (isPlayingDeletedTrack) {
+                  // Safely move active pointer and pause audio to prevent media decode crashes
+                  if (tracks.length > 0) {
+                    loadTrack(0);
+                    if (elMainAudio) elMainAudio.pause();
+                    if (isPlaying) {
+                      isPlaying = false;
+                      updatePlayerUIPlaying(false);
+                    }
+                  } else {
+                    if (elMainAudio) elMainAudio.pause();
+                    isPlaying = false;
+                    updatePlayerUIPlaying(false);
+                    if (elTrackTitleMain) elTrackTitleMain.textContent = "ไม่มีเพลงในคลัง";
+                    if (elTrackAlbumMain) elTrackAlbumMain.textContent = "";
+                  }
+                }
+                
                 renderLibrary();
                 updateDashboardStats();
                 renderDashboardCatalog();
@@ -3060,9 +3139,26 @@ function renderDashboardCatalog() {
           }
         } else {
           // Hide built-in track
+          const isPlayingDeletedTrack = (tracks[currentTrackIndex] && tracks[currentTrackIndex].trackId === track.trackId);
           hiddenTrackIds.push(track.trackId);
           localStorage.setItem(STORAGE_KEY_HIDDEN, JSON.stringify(hiddenTrackIds));
           resolveTracksList();
+          
+          if (isPlayingDeletedTrack) {
+            if (tracks.length > 0) {
+              loadTrack(0);
+              if (elMainAudio) elMainAudio.pause();
+              if (isPlaying) {
+                isPlaying = false;
+                updatePlayerUIPlaying(false);
+              }
+            } else {
+              if (elMainAudio) elMainAudio.pause();
+              isPlaying = false;
+              updatePlayerUIPlaying(false);
+            }
+          }
+          
           renderLibrary();
           updateDashboardStats();
           renderDashboardCatalog();
@@ -3287,6 +3383,11 @@ function setupDashboardEventListeners() {
       
       // Compose custom track object
       const trackId = 'custom_' + Date.now();
+      
+      // Parse year safely to prevent RangeErrors
+      const parsedYear = year ? parseInt(year, 10) : new Date().getFullYear();
+      const validYear = isNaN(parsedYear) || parsedYear < 1900 || parsedYear > 2100 ? new Date().getFullYear() : parsedYear;
+      
       const customTrack = {
         trackId: trackId,
         trackName: title,
@@ -3294,7 +3395,7 @@ function setupDashboardEventListeners() {
         artworkUrl100: artworkUrl100,
         artworkBlob: artworkBlob,
         audioBlob: audioFile,
-        releaseDate: new Date(year, 0, 1).toISOString(),
+        releaseDate: new Date(validYear, 0, 1).toISOString(),
         primaryGenreName: genre,
         trackViewUrl: '#',
         isCustom: true
@@ -3391,7 +3492,12 @@ function setupDashboardEventListeners() {
           if (customTrack) {
             customTrack.trackName = title;
             customTrack.collectionName = album;
-            customTrack.releaseDate = new Date(year, 0, 1).toISOString();
+            
+            // Parse year safely to prevent RangeErrors
+            const parsedYear = year ? parseInt(year, 10) : new Date().getFullYear();
+            const validYear = isNaN(parsedYear) || parsedYear < 1900 || parsedYear > 2100 ? new Date().getFullYear() : parsedYear;
+            
+            customTrack.releaseDate = new Date(validYear, 0, 1).toISOString();
             customTrack.primaryGenreName = genre;
             
             await saveCustomTrackToDB(customTrack);
