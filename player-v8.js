@@ -34,7 +34,7 @@ let isLightMode = localStorage.getItem('jeff_bernat_light_mode') === 'true';
 let currentFilter = 'all'; // 'all' | 'favorites'
 let isShuffle = false;
 let isRepeat = false;
-let theme = ['rain', 'cafe', 'study'].includes(localStorage.getItem(STORAGE_KEY_THEME)) ? localStorage.getItem(STORAGE_KEY_THEME) : 'rain'; // 'rain' | 'cafe' | 'study'
+let theme = ['rain', 'cafe', 'study', 'sakura', 'candle'].includes(localStorage.getItem(STORAGE_KEY_THEME)) ? localStorage.getItem(STORAGE_KEY_THEME) : 'rain'; // 'rain' | 'cafe' | 'study' | 'sakura' | 'candle'
 let currentSessionPreset = localStorage.getItem(STORAGE_KEY_SESSION) || null;
 let ambientVisualIntensity = 1;
 let activeAccentRgb = '56, 189, 248'; // Cached active accent color to prevent layout thrashing in animation loop
@@ -295,6 +295,22 @@ const SESSION_PRESETS = {
     visualIntensity: 0.45,
     ambientOn: false,
     toast: 'ปิดเสียงบรรยากาศ เหลือแต่เพลงแบบสะอาด ๆ'
+  },
+  'sakura-date': {
+    label: 'Sakura Date 🌸',
+    theme: 'sakura',
+    volumes: { rain: 18, cafe: 0, fireplace: 8 },
+    visualIntensity: 1.1,
+    ambientOn: true,
+    toast: 'เดทใต้ดอกซากุระ กลีบดอกไม้ร่วงหล่น ช่วงเวลาที่โรแมนติกที่สุด 🌸'
+  },
+  'candlelit-night': {
+    label: 'Candlelit Night 🕯️',
+    theme: 'candle',
+    volumes: { rain: 0, cafe: 8, fireplace: 38 },
+    visualIntensity: 0.8,
+    ambientOn: true,
+    toast: 'แสงเทียนอบอุ่น บรรยากาศดินเนอร์สำหรับสองเรา 🕯️'
   }
 };
 
@@ -1852,11 +1868,17 @@ function handleVolumeChange() {
 // --- 17. Favorites Manager ---
 function toggleFavorite(id, heartBtnElement) {
   const index = favorites.indexOf(id);
-  if (index === -1) {
+  const isAdding = index === -1;
+  if (isAdding) {
     favorites.push(id);
     if (heartBtnElement) {
       heartBtnElement.classList.add('active');
       heartBtnElement.querySelector('i').className = 'fa-solid fa-heart';
+    }
+    // 💖 Love Confetti burst!
+    if (typeof spawnLoveConfetti === 'function') {
+      const rect = heartBtnElement ? heartBtnElement.getBoundingClientRect() : null;
+      spawnLoveConfetti(rect);
     }
   } else {
     favorites.splice(index, 1);
@@ -1874,6 +1896,10 @@ function toggleFavorite(id, heartBtnElement) {
       if (favorites.includes(id)) {
         elHeartCurrentBtn.className = 'sub-btn active';
         elHeartCurrentBtn.innerHTML = '<i class="fa-solid fa-heart"></i>';
+        // 💖 Love Confetti from main heart button too
+        if (typeof spawnLoveConfetti === 'function') {
+          spawnLoveConfetti(elHeartCurrentBtn.getBoundingClientRect());
+        }
       } else {
         elHeartCurrentBtn.className = 'sub-btn';
         elHeartCurrentBtn.innerHTML = '<i class="fa-regular fa-heart"></i>';
@@ -1889,8 +1915,10 @@ function toggleFavorite(id, heartBtnElement) {
 // --- 18. Environment Theme, Session Presets & Weather Particles Engine ---
 function setBodyThemeClass(targetTheme) {
   if (!elBody) return;
-  elBody.classList.remove('theme-rain', 'theme-cafe', 'theme-study');
+  elBody.classList.remove('theme-rain', 'theme-cafe', 'theme-study', 'theme-sakura', 'theme-candle');
   elBody.classList.add(`theme-${targetTheme}`);
+  // Update romantic particles when theme changes
+  if (typeof updateRomanticParticles === 'function') updateRomanticParticles(targetTheme);
 }
 
 function updateSessionPresetUI() {
@@ -1967,7 +1995,7 @@ function initCozySessionPresets() {
   }
 
   const savedTheme = localStorage.getItem(STORAGE_KEY_THEME);
-  if (savedTheme && ['rain', 'cafe', 'study'].includes(savedTheme)) {
+  if (savedTheme && ['rain', 'cafe', 'study', 'sakura', 'candle'].includes(savedTheme)) {
     changeMoodTheme(savedTheme, { keepSessionPreset: true });
   } else {
     setBodyThemeClass(theme);
@@ -2001,6 +2029,14 @@ function changeMoodTheme(targetTheme, options = {}) {
       updateAmbientChannelVolume('rain', 0);
       updateAmbientChannelVolume('cafe', 0);
       updateAmbientChannelVolume('fireplace', 45);
+    } else if (targetTheme === 'sakura') {
+      updateAmbientChannelVolume('rain', 20);
+      updateAmbientChannelVolume('cafe', 0);
+      updateAmbientChannelVolume('fireplace', 10);
+    } else if (targetTheme === 'candle') {
+      updateAmbientChannelVolume('rain', 0);
+      updateAmbientChannelVolume('cafe', 10);
+      updateAmbientChannelVolume('fireplace', 40);
     }
   }
 
@@ -2040,7 +2076,7 @@ function resetAmbientCanvas() {
   if (animationFrameId) cancelAnimationFrame(animationFrameId);
   if (!elAmbientCanvas) return;
   
-  const baseCount = theme === 'rain' ? 80 : theme === 'cafe' ? 25 : 35;
+  const baseCount = theme === 'rain' ? 80 : theme === 'cafe' ? 25 : theme === 'sakura' ? 40 : theme === 'candle' ? 20 : 35;
   const count = Math.max(12, Math.round(baseCount * ambientVisualIntensity));
   for (let i = 0; i < count; i++) {
     particles.push(createParticle(true));
@@ -2071,6 +2107,27 @@ function createParticle(randomY = false) {
       opacity: (0.05 + Math.random() * 0.15) * Math.min(1.3, ambientVisualIntensity),
       wobble: Math.random() * 2,
       wobbleSpeed: 0.01 + Math.random() * 0.02
+    };
+  } else if (theme === 'sakura') {
+    return {
+      x: Math.random() * w,
+      y: randomY ? Math.random() * h : -20,
+      radius: 1.5 + Math.random() * 3,
+      speed: (0.3 + Math.random() * 0.5) * Math.max(0.7, ambientVisualIntensity),
+      opacity: (0.08 + Math.random() * 0.18) * Math.min(1.3, ambientVisualIntensity),
+      wobble: Math.random() * 3,
+      wobbleSpeed: 0.008 + Math.random() * 0.015,
+      color: `hsl(${330 + Math.random() * 20}, 80%, ${65 + Math.random() * 20}%)`
+    };
+  } else if (theme === 'candle') {
+    return {
+      x: Math.random() * w,
+      y: randomY ? Math.random() * h : h + 20,
+      radius: 1 + Math.random() * 2.5,
+      speed: (0.6 + Math.random() * 0.8) * Math.max(0.7, ambientVisualIntensity),
+      opacity: (0.1 + Math.random() * 0.25) * Math.min(1.3, ambientVisualIntensity),
+      flicker: Math.random() * Math.PI,
+      color: `hsl(${35 + Math.random() * 15}, 95%, ${55 + Math.random() * 15}%)`
     };
   } else {
     return {
@@ -2115,6 +2172,44 @@ function drawAmbientLoop() {
       
       p.y -= p.speed;
       p.wobble += p.wobbleSpeed;
+      
+      if (p.y < -20) {
+        particles[idx] = createParticle(false);
+      }
+    } else if (theme === 'sakura') {
+      // Sakura: soft pink particles falling gently
+      canvasCtx.fillStyle = p.color || `rgba(244, 114, 182, ${p.opacity})`;
+      canvasCtx.globalAlpha = p.opacity;
+      canvasCtx.beginPath();
+      canvasCtx.arc(p.x + Math.sin(p.wobble) * 20, p.y, p.radius, 0, Math.PI * 2);
+      canvasCtx.fill();
+      canvasCtx.globalAlpha = 1;
+      
+      p.y += p.speed;
+      p.x += Math.sin(p.wobble) * 0.3;
+      p.wobble += p.wobbleSpeed;
+      
+      if (p.y > h + 20) {
+        particles[idx] = createParticle(false);
+      }
+    } else if (theme === 'candle') {
+      // Candle: warm golden embers rising with flicker
+      const flickerOpacity = p.opacity * (0.5 + 0.5 * Math.sin(p.flicker));
+      canvasCtx.fillStyle = p.color;
+      canvasCtx.shadowColor = p.color;
+      canvasCtx.shadowBlur = 12;
+      canvasCtx.globalAlpha = flickerOpacity;
+      
+      canvasCtx.beginPath();
+      canvasCtx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+      canvasCtx.fill();
+      
+      canvasCtx.globalAlpha = 1;
+      canvasCtx.shadowBlur = 0;
+      
+      p.y -= p.speed;
+      p.flicker += 0.06;
+      p.x += Math.sin(p.flicker) * 0.3;
       
       if (p.y < -20) {
         particles[idx] = createParticle(false);
@@ -3360,3 +3455,239 @@ function initThemeToggle() {
     console.log("Theme Toggle initialized successfully.");
   }
 }
+
+// ==========================================================================
+// --- 27. Love Confetti 💖 — Heart Burst on Favorite ---
+// ==========================================================================
+function spawnLoveConfetti(originRect) {
+  const container = document.getElementById('love-confetti-container');
+  if (!container) return;
+
+  const heartEmojis = ['💖', '💕', '💗', '💓', '💝', '❤️', '🩷', '🌸', '✨'];
+  const count = 18 + Math.floor(Math.random() * 8);
+
+  const cx = originRect ? (originRect.left + originRect.width / 2) : window.innerWidth / 2;
+  const cy = originRect ? (originRect.top + originRect.height / 2) : window.innerHeight / 2;
+
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('span');
+    el.className = 'love-heart-particle';
+    el.textContent = heartEmojis[Math.floor(Math.random() * heartEmojis.length)];
+
+    const offsetX = (Math.random() - 0.5) * 200;
+    const offsetY = (Math.random() - 0.5) * 60;
+    const scale = 0.6 + Math.random() * 0.8;
+    const delay = Math.random() * 0.4;
+    const duration = 1.6 + Math.random() * 1.2;
+
+    el.style.left = `${cx + offsetX}px`;
+    el.style.top = `${cy + offsetY}px`;
+    el.style.fontSize = `${scale * 1.4}rem`;
+    el.style.animationDelay = `${delay}s`;
+    el.style.animationDuration = `${duration}s`;
+
+    container.appendChild(el);
+
+    setTimeout(() => {
+      if (el.parentNode) el.parentNode.removeChild(el);
+    }, (delay + duration) * 1000 + 200);
+  }
+}
+
+// ==========================================================================
+// --- 28. Floating Romantic Quotes ✨ ---
+// ==========================================================================
+const ROMANTIC_QUOTES = [
+  '"You are my today and all of my tomorrows." — Leo Christopher',
+  '"I love you not only for what you are, but for what I am when I am with you."',
+  '"Every love story is beautiful, but ours is my favorite." 💕',
+  '"In all the world, there is no heart for me like yours." — Maya Angelou',
+  '"You are the finest, loveliest, tenderest person I have ever known." — F. Scott Fitzgerald',
+  '"I have found the one whom my soul loves." — Song of Solomon',
+  '"Wherever you are is my home." 🏡',
+  '"You make my heart smile." 💗',
+  '"Love is composed of a single soul inhabiting two bodies." — Aristotle',
+  '"I fell in love the way you fall asleep: slowly, then all at once." — John Green',
+  '"คนรักกันไม่จำเป็นต้องเห็นตา แค่รู้สึกก็พอ" 🌙',
+  '"รักเธอเท่าฟ้า สุดปลายขอบจักรวาล" ✨',
+  '"ทุกวันที่มีเธอ คือวันที่สวยที่สุด" 🌸',
+  '"เพราะเพลงนี้ ทำให้คิดถึงเธอ" 🎵',
+  '"แค่ได้อยู่ข้างเธอ ก็เพียงพอแล้ว" 💖',
+  '"Love looks not with the eyes, but with the mind." — Shakespeare',
+  '"The best thing to hold onto in life is each other." — Audrey Hepburn',
+  '"You are my sun, my moon, and all my stars." — E.E. Cummings',
+  '"I choose you. And I\'ll choose you over and over." 💝',
+  '"A simple \'I love you\' means more than money." — Frank Sinatra'
+];
+
+let floatingQuoteInterval = null;
+
+function spawnFloatingQuote() {
+  const container = document.getElementById('floating-quotes-container');
+  if (!container) return;
+
+  // Limit max visible quotes to avoid performance issues
+  if (container.children.length > 3) return;
+
+  const quote = ROMANTIC_QUOTES[Math.floor(Math.random() * ROMANTIC_QUOTES.length)];
+  const el = document.createElement('div');
+  el.className = 'floating-quote';
+  el.textContent = quote;
+
+  const yPos = 15 + Math.random() * 70; // between 15% and 85% of viewport height
+  el.style.top = `${yPos}%`;
+  el.style.right = '-100%';
+
+  const duration = 14 + Math.random() * 10;
+  el.style.animationDuration = `${duration}s`;
+
+  container.appendChild(el);
+
+  setTimeout(() => {
+    if (el.parentNode) el.parentNode.removeChild(el);
+  }, duration * 1000 + 500);
+}
+
+function startFloatingQuotes() {
+  if (floatingQuoteInterval) return;
+  // Spawn one immediately
+  spawnFloatingQuote();
+  // Then every 15-25 seconds
+  floatingQuoteInterval = setInterval(() => {
+    spawnFloatingQuote();
+  }, 15000 + Math.random() * 10000);
+}
+
+function stopFloatingQuotes() {
+  if (floatingQuoteInterval) {
+    clearInterval(floatingQuoteInterval);
+    floatingQuoteInterval = null;
+  }
+  const container = document.getElementById('floating-quotes-container');
+  if (container) container.innerHTML = '';
+}
+
+// ==========================================================================
+// --- 29. Romantic Particles (Sakura Petals / Candle Sparks) 🌸🕯️ ---
+// ==========================================================================
+let romanticParticleInterval = null;
+
+function spawnRomanticParticle(type) {
+  const container = document.getElementById('romantic-particles');
+  if (!container) return;
+
+  // Limit particles for performance
+  if (container.children.length > 20) return;
+
+  const el = document.createElement('div');
+
+  if (type === 'sakura') {
+    el.className = 'sakura-petal';
+    const size = 8 + Math.random() * 10;
+    el.style.width = `${size}px`;
+    el.style.height = `${size}px`;
+    el.style.left = `${Math.random() * 100}%`;
+    el.style.top = '-20px';
+
+    const duration = 8 + Math.random() * 8;
+    el.style.animationDuration = `${duration}s`;
+    el.style.animationDelay = `${Math.random() * 2}s`;
+
+    // Randomize petal rotation starting point
+    const hue = 330 + Math.random() * 30;
+    el.style.filter = `drop-shadow(0 0 4px hsla(${hue}, 80%, 70%, 0.3)) hue-rotate(${Math.random() * 20 - 10}deg)`;
+
+    container.appendChild(el);
+    setTimeout(() => {
+      if (el.parentNode) el.parentNode.removeChild(el);
+    }, (duration + 2) * 1000 + 500);
+
+  } else if (type === 'candle') {
+    el.className = 'candle-spark';
+    const size = 2 + Math.random() * 4;
+    el.style.width = `${size}px`;
+    el.style.height = `${size}px`;
+    el.style.left = `${20 + Math.random() * 60}%`;
+    el.style.bottom = '0';
+
+    const duration = 6 + Math.random() * 6;
+    el.style.animationDuration = `${duration}s`;
+    el.style.animationDelay = `${Math.random() * 1.5}s`;
+
+    // Vary warmth
+    const warm = Math.random() > 0.5;
+    if (warm) {
+      el.style.background = 'radial-gradient(circle, #fef3c7, #f59e0b)';
+      el.style.boxShadow = '0 0 8px 3px rgba(245, 158, 11, 0.5)';
+    }
+
+    container.appendChild(el);
+    setTimeout(() => {
+      if (el.parentNode) el.parentNode.removeChild(el);
+    }, (duration + 1.5) * 1000 + 500);
+  }
+}
+
+function updateRomanticParticles(currentTheme) {
+  // Clear existing particles
+  if (romanticParticleInterval) {
+    clearInterval(romanticParticleInterval);
+    romanticParticleInterval = null;
+  }
+  const container = document.getElementById('romantic-particles');
+  if (container) container.innerHTML = '';
+
+  if (currentTheme === 'sakura') {
+    // Spawn initial batch
+    for (let i = 0; i < 6; i++) {
+      setTimeout(() => spawnRomanticParticle('sakura'), i * 400);
+    }
+    // Continuous petals
+    romanticParticleInterval = setInterval(() => {
+      spawnRomanticParticle('sakura');
+    }, 1500 + Math.random() * 1000);
+    // Start floating quotes with sakura theme
+    startFloatingQuotes();
+  } else if (currentTheme === 'candle') {
+    // Spawn initial batch
+    for (let i = 0; i < 4; i++) {
+      setTimeout(() => spawnRomanticParticle('candle'), i * 300);
+    }
+    // Continuous candle sparks
+    romanticParticleInterval = setInterval(() => {
+      spawnRomanticParticle('candle');
+    }, 2000 + Math.random() * 1500);
+    // Start floating quotes with candle theme
+    startFloatingQuotes();
+  } else {
+    // Non-romantic themes: stop floating quotes
+    stopFloatingQuotes();
+  }
+}
+
+// ==========================================================================
+// --- 30. Initialize Romantic Features on DOM Ready ---
+// ==========================================================================
+(function initRomanticFeatures() {
+  // Wait for DOMContentLoaded to ensure all elements are ready
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bootstrapRomanticFeatures);
+  } else {
+    // DOM already loaded, init directly (in case script runs late)
+    bootstrapRomanticFeatures();
+  }
+
+  function bootstrapRomanticFeatures() {
+    console.log("🌸 Initializing Romantic Features...");
+
+    // If current theme is sakura or candle, start particles immediately
+    const currentTheme = localStorage.getItem(STORAGE_KEY_THEME);
+    if (currentTheme === 'sakura' || currentTheme === 'candle') {
+      setTimeout(() => {
+        updateRomanticParticles(currentTheme);
+      }, 1500); // Small delay to let the main app load first
+    }
+
+    console.log("💖 Romantic Features initialized: Love Confetti, Floating Quotes, Sakura Petals, Candle Sparks");
+  }
+})();

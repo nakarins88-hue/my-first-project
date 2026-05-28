@@ -42,7 +42,7 @@
   <!-- FontAwesome for Premium Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Core Stylesheet -->
-  <link rel="stylesheet" href="style.css?v=14">
+  <link rel="stylesheet" href="style.css?v=15">
 </head>
 <body class="theme-rain">
   <!-- Background Canvas for Particles/Rain/Embers -->
@@ -51,6 +51,15 @@
 
   <!-- Background Music Note Particles -->
   <div class="floating-notes" id="floating-notes"></div>
+
+  <!-- Love Confetti Particles (triggered on favorite) -->
+  <div class="love-confetti-container" id="love-confetti-container"></div>
+
+  <!-- Floating Romantic Quotes -->
+  <div class="floating-quotes-container" id="floating-quotes-container"></div>
+
+  <!-- Petal / Candle Flame Particles -->
+  <div class="romantic-particles" id="romantic-particles"></div>
 
   <!-- Main Container -->
   <main class="lounge-container">
@@ -72,6 +81,12 @@
         </button>
         <button class="mood-btn" data-theme="study" title="Vintage Fireplace">
           <i class="fa-solid fa-fire"></i> <span>Vintage Study</span>
+        </button>
+        <button class="mood-btn" data-theme="sakura" title="Romantic Sakura">
+          <i class="fa-solid fa-heart"></i> <span>Sakura Romance</span>
+        </button>
+        <button class="mood-btn" data-theme="candle" title="Candle Light Dinner">
+          <i class="fa-solid fa-fire-flame-curved"></i> <span>Candle Light</span>
         </button>
       </div>
 
@@ -153,6 +168,14 @@
               <button type="button" class="session-preset-btn" data-session-preset="pure-music" aria-pressed="false" title="Pure Music session">
                 <i class="fa-solid fa-headphones"></i>
                 <span>Pure Music</span>
+              </button>
+              <button type="button" class="session-preset-btn" data-session-preset="sakura-date" aria-pressed="false" title="Sakura Date session">
+                <i class="fa-solid fa-heart"></i>
+                <span>Sakura Date</span>
+              </button>
+              <button type="button" class="session-preset-btn" data-session-preset="candlelit-night" aria-pressed="false" title="Candlelit Night session">
+                <i class="fa-solid fa-fire-flame-curved"></i>
+                <span>Candlelit</span>
               </button>
             </div>
           </div>
@@ -574,6 +597,6 @@
   </div>
 
   <!-- Main JavaScript File -->
-  <script src="player-v8.js?v=14"></script>
+  <script src="player-v8.js?v=15"></script>
 </body>
 </html>
