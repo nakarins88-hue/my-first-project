@@ -2122,39 +2122,53 @@ async function fetchSongsFromiTunes() {
                !clean.includes('mix');
       });
 
-      filteredLocalMerge.forEach(fileName => {
+      filteredLocalMerge.forEach((fileName, idx) => {
         const nameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
         const cleanFile = nameWithoutExt.toLowerCase().replace(/[^a-z0-9]/g, '');
         
         // Check if this file is already matched in mergedTracks
+        // Use STRICT match to avoid false positives (e.g. "Talk" matching "Pillow Talk")
         const isMatched = mergedTracks.some(t => {
           if (!t.trackName) return false;
           const cleanTName = t.trackName.toLowerCase().replace(/[^a-z0-9]/g, '');
-          return cleanFile.includes(cleanTName) || cleanTName.includes(cleanFile);
+          // Exact match
+          if (cleanFile === cleanTName) return true;
+          // Allow partial match only if names are very similar length
+          const shorter = cleanFile.length < cleanTName.length ? cleanFile : cleanTName;
+          const longer = cleanFile.length >= cleanTName.length ? cleanFile : cleanTName;
+          if (shorter.length < 4) return false; // Never match very short names
+          if (shorter.length / longer.length < 0.7) return false; // Too different in length
+          return longer.includes(shorter);
         });
         
         if (!isMatched) {
-          // Add as a local-first track!
+          // Detect multi-artist songs (from dall folder) vs Jeff Bernat originals
+          const isMultiArtist = nameWithoutExt.includes(" - ");
+          
           let collection = "The Gentleman Approach";
-          let artwork = "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/ce/27/ef/ce27efc6-7a71-6c2e-4b61-9c60e334df58/artwork.jpg/500x500bb.jpg";
+          let artwork = getLocalCoverUrl(nameWithoutExt, collection);
           let year = "2012-12-07T08:00:00Z";
           
-          if (cleanFile.includes("pillowtalk") || cleanFile.includes("coolgirls") || cleanFile.includes("modernrenaissance")) {
+          if (isMultiArtist) {
+            collection = "Cozy Lounge Hits";
+            artwork = getLocalCoverUrl(nameWithoutExt, collection);
+            year = "2026-05-29T00:00:00Z";
+          } else if (cleanFile.includes("pillowtalk") || cleanFile.includes("coolgirls") || cleanFile.includes("modernrenaissance")) {
             collection = "Modern Renaissance";
-            artwork = "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/db/45/ad/db45ad7d-c07a-251c-4395-9ff2d973715c/artwork.jpg/500x500bb.jpg";
+            artwork = "cover_renaissance.png";
             year = "2013-12-15T08:00:00Z";
           } else if (cleanFile.includes("changes") || cleanFile.includes("shelovesmenot")) {
             collection = "She Loves Me Not";
-            artwork = "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/99/bd/27/99bd27df-6bf9-e30b-0447-38e55e09f583/artwork.jpg/500x500bb.jpg";
+            artwork = "cover_shelovesmenot.png";
             year = "2019-05-10T08:00:00Z";
           } else if (cleanFile.includes("still") || cleanFile.includes("cruisin") || cleanFile.includes("meantime")) {
             collection = "In the Meantime";
-            artwork = "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/f4/bf/16/f4bf168e-9080-60b6-11fc-db439563f458/artwork.jpg/500x500bb.jpg";
+            artwork = "cover_meantime.png";
             year = "2016-01-16T08:00:00Z";
           }
 
           const localTrack = {
-            trackId: 'local_' + cleanFile,
+            trackId: 'local_' + cleanFile + '_' + idx,
             trackName: nameWithoutExt,
             collectionName: collection,
             artworkUrl100: artwork,
