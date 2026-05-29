@@ -1,0 +1,146 @@
+/* ==========================================================================
+   Real-time Visitor Counter Styling - Isolated Widget
+   ========================================================================== */
+
+.visitor-counter-widget {
+  position: fixed;
+  bottom: 24px;
+  left: 24px;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 16px;
+  background: var(--panel-bg, rgba(16, 20, 32, 0.7));
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: var(--panel-border, 1px solid rgba(255, 255, 255, 0.08));
+  border-radius: 16px;
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.25);
+  font-family: var(--font-sans), sans-serif;
+  font-size: 13.5px;
+  color: var(--text-main, #f1f5f9);
+  transition: var(--transition-smooth, all 0.4s cubic-bezier(0.25, 0.8, 0.25, 1));
+  pointer-events: auto;
+  opacity: 0;
+  transform: translateY(20px);
+  animation: visitor-badge-fade-in 0.8s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+  animation-delay: 1.2s;
+}
+
+@keyframes visitor-badge-fade-in {
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.visitor-counter-widget:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 36px 0 rgba(var(--accent-rgb, 56, 189, 248), 0.25);
+  border-color: rgba(var(--accent-rgb, 56, 189, 248), 0.35);
+}
+
+/* Status Indicator Dot */
+.visitor-status-dot-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 10px;
+  height: 10px;
+}
+
+.visitor-status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: var(--accent, #38bdf8);
+  box-shadow: 0 0 8px var(--accent, #38bdf8);
+  transition: background-color 0.4s ease, box-shadow 0.4s ease;
+}
+
+.visitor-status-pulse {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 2px solid var(--accent, #38bdf8);
+  opacity: 0;
+  animation: visitor-dot-pulse 2s infinite ease-out;
+  transition: border-color 0.4s ease;
+}
+
+@keyframes visitor-dot-pulse {
+  0% {
+    transform: scale(0.5);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+/* Content Layout */
+.visitor-counter-content {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.4;
+}
+
+.visitor-counter-text {
+  font-weight: 500;
+  letter-spacing: 0.2px;
+  transition: opacity 0.3s ease;
+}
+
+.visitor-counter-label {
+  font-size: 10px;
+  color: var(--text-sub, #94a3b8);
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  font-weight: 600;
+}
+
+/* Connecting / Disconnected status overrides */
+.visitor-counter-widget.connecting .visitor-status-dot {
+  background-color: #f59e0b; /* Golden Yellow */
+  box-shadow: 0 0 8px #f59e0b;
+}
+.visitor-counter-widget.connecting .visitor-status-pulse {
+  border-color: #f59e0b;
+}
+
+.visitor-counter-widget.disconnected .visitor-status-dot {
+  background-color: #ef4444; /* Soft Red */
+  box-shadow: 0 0 8px #ef4444;
+}
+.visitor-counter-widget.disconnected .visitor-status-pulse {
+  display: none;
+}
+
+/* Mobile Responsiveness */
+@media (max-width: 850px) {
+  .visitor-counter-widget {
+    bottom: 84px; /* Float safely above the mobile navigation bar */
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    padding: 8px 14px;
+    font-size: 12px;
+    width: max-content;
+    max-width: 90%;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+  }
+  
+  @keyframes visitor-badge-fade-in {
+    to {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+  }
+
+  .visitor-counter-widget:hover {
+    transform: translateX(-50%) translateY(-2px);
+  }
+}
