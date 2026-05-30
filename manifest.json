@@ -1,0 +1,20 @@
+{
+  "name": "Jeff Bernat Cozy Music Lounge",
+  "short_name": "Cozy Lounge",
+  "description": "สัมผัสบรรยากาศดนตรีอบอุ่นกับ Jeff Bernat ฟังเพลงเต็มความละเอียดสูง ผสมเสียงบรรยากาศฝนตก คาเฟ่ และเตาผิงไฟ",
+  "start_url": "./?source=pwa",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0a0d14",
+  "theme_color": "#0a0d14",
+  "categories": ["music", "entertainment"],
+  "icons": [
+    {
+      "src": "default_cover.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

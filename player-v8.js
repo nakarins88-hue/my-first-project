@@ -1640,8 +1640,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // --- Bind Event Listeners defensively ---
     setupDOMEventListeners();
 
-    // --- Initialize Ambient Canvas, Lockscreen, and Mobile Navigation ---
-    if (typeof killServiceWorkersAndCaches === 'function') killServiceWorkersAndCaches();
+    // --- Initialize PWA Service Worker, Lockscreen, and Mobile Navigation ---
+    if (typeof registerServiceWorker === 'function') registerServiceWorker();
     if (typeof setupMediaSessionActions === 'function') setupMediaSessionActions();
     if (typeof initMobileNavigation === 'function') initMobileNavigation();
 
@@ -2950,32 +2950,30 @@ function drawPlayerVisualizer() {
 // PWA, Media Session, Mobile Navigation, and Cozy Pixel Parallax Engine
 // ==========================================================================
 
-// --- 21. Progressive Web App (PWA) Self-Destruct Routine (Clears mobile cached standalone states) ---
-function killServiceWorkersAndCaches() {
+// --- 21. Progressive Web App (PWA) Service Worker Registration ---
+// Registers the service worker to enable background audio playback on mobile
+// and offline caching of the app shell. The SW must stay active for iOS/Android
+// to allow audio to continue playing when the screen is locked or app is switched.
+function registerServiceWorker() {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.getRegistrations().then(registrations => {
-      for (let registration of registrations) {
-        registration.unregister().then(success => {
-          if (success) {
-            console.log("Cozy Player: Unregistered active service worker successfully.");
+    navigator.serviceWorker.register('./service-worker.js')
+      .then(registration => {
+        console.log('Cozy Player: Service Worker registered successfully. Scope:', registration.scope);
+        // Check for updates periodically
+        registration.addEventListener('updatefound', () => {
+          const newWorker = registration.installing;
+          if (newWorker) {
+            newWorker.addEventListener('statechange', () => {
+              if (newWorker.state === 'activated') {
+                console.log('Cozy Player: New Service Worker activated.');
+              }
+            });
           }
         });
-      }
-    }).catch(err => {
-      console.warn("Error unregistering service workers:", err);
-    });
-  }
-  
-  if ('caches' in window) {
-    caches.keys().then(keys => {
-      keys.forEach(key => {
-        caches.delete(key).then(() => {
-          console.log("Cozy Player: Deleted stale client cache:", key);
-        });
+      })
+      .catch(err => {
+        console.warn('Cozy Player: Service Worker registration failed:', err);
       });
-    }).catch(err => {
-      console.warn("Error clearing caches:", err);
-    });
   }
 }
 
@@ -2987,13 +2985,25 @@ function updateMediaSessionMetadata(track) {
       // Construct full absolute URL for local cover to prevent CORS errors on Safari/Chrome
       const absoluteCoverUrl = new URL(localCover, window.location.href).href;
       
+      // Build artwork array with multiple sizes for Android notification tray compatibility
+      const artworkList = [
+        { src: absoluteCoverUrl, sizes: '96x96', type: 'image/png' },
+        { src: absoluteCoverUrl, sizes: '128x128', type: 'image/png' },
+        { src: absoluteCoverUrl, sizes: '256x256', type: 'image/png' },
+        { src: absoluteCoverUrl, sizes: '512x512', type: 'image/png' }
+      ];
+      
+      // Add iTunes artwork as a high-quality fallback if available
+      if (track.artworkUrl100) {
+        const itunesLarge = track.artworkUrl100.replace('100x100', '512x512');
+        artworkList.push({ src: itunesLarge, sizes: '512x512', type: 'image/jpeg' });
+      }
+      
       navigator.mediaSession.metadata = new MediaMetadata({
         title: track.trackName,
         artist: 'Jeff Bernat',
         album: track.collectionName,
-        artwork: [
-          { src: absoluteCoverUrl, sizes: '512x512', type: 'image/png' }
-        ]
+        artwork: artworkList
       });
       console.log("Media Session Metadata loaded:", track.trackName);
     } catch (e) {
@@ -3018,6 +3028,30 @@ function setupMediaSessionActions() {
       navigator.mediaSession.setActionHandler('nexttrack', () => {
         nextTrack(true);
       });
+
+      // Stop handler — clears notification and stops playback completely
+      try {
+        navigator.mediaSession.setActionHandler('stop', () => {
+          pauseAudio();
+          if (elMainAudio) {
+            elMainAudio.currentTime = 0;
+          }
+          navigator.mediaSession.playbackState = 'none';
+        });
+      } catch(e) {}
+
+      // Seek-to handler for Android notification seek bar
+      try {
+        navigator.mediaSession.setActionHandler('seekto', (details) => {
+          if (details.seekTime != null) {
+            if (isHtml5AudioEngine() && elMainAudio) {
+              elMainAudio.currentTime = details.seekTime;
+            } else if (isYtReady && ytPlayer) {
+              ytPlayer.seekTo(details.seekTime, true);
+            }
+          }
+        });
+      } catch(e) {}
 
       // Explicitly disable seek-forward/backward so iOS shows ⏮️/⏭️ 
       // instead of ⏪10s/⏩10s on the lock screen

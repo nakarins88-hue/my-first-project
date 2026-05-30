@@ -1,36 +1,20 @@
 <!DOCTYPE html>
 <html lang="th">
 <head>
-  <script>
-    // Hyper-aggressive inline unregister and cache clear to rescue cached phones instantly!
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.getRegistrations().then(function(registrations) {
-        var unregistered = false;
-        registrations.forEach(function(registration) {
-          registration.unregister().then(function(success) {
-            if (success) {
-              unregistered = true;
-              console.log('Force unregistered service worker');
-            }
-          });
-        });
-        if (unregistered) {
-          setTimeout(function() { window.location.reload(); }, 150);
-        }
-      });
-    }
-    if ('caches' in window) {
-      caches.keys().then(function(keys) {
-        keys.forEach(function(key) {
-          caches.delete(key);
-        });
-      });
-    }
-  </script>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jeff Bernat Cozy Music Lounge 🌙</title>
   <meta name="description" content="สัมผัสบรรยากาศดนตรีอบอุ่นกับ Jeff Bernat Cozy Music Lounge ฟังเพลงเต็มความละเอียดสูง ผสมเสียงบรรยากาศฝนตก คาเฟ่ และเตาผิงไฟออฟไลน์">
+  
+  <!-- PWA Manifest & Theme -->
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#0a0d14">
+  
+  <!-- Apple PWA Support (Background Audio + Add to Home Screen) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Cozy Lounge">
+  <link rel="apple-touch-icon" href="default_cover.png">
   
   <!-- Preload Critical LCP Cover Image -->
   <link rel="preload" as="image" href="default_cover.png">
