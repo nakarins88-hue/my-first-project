@@ -43,6 +43,8 @@ let waveOffset = 0;
 let visualizerAnimId = null;
 let activeLyricTimestamps = [];
 let cozyToastTimer = null;
+let lastHtml5Time = 0;
+let html5TimeUnchangedCount = 0;
 
 // Audio Engine Caches & Settings
 let elEngineYoutube = null;
@@ -997,6 +999,20 @@ function isHtml5AudioEngine() {
   return currentEngine === 'local' || currentEngine === 'itunes' || useFallbackAudio;
 }
 
+function getCorrectedDuration(audioElement, track) {
+  if (!audioElement) return 30;
+  let reportedDuration = audioElement.duration || 30;
+  
+  // If reported duration is double (or significantly larger than) the actual duration
+  if (track && track.trackDuration && reportedDuration > 30) {
+    if (reportedDuration > track.trackDuration * 1.5) {
+      return track.trackDuration;
+    }
+  }
+  
+  return reportedDuration;
+}
+
 function getActiveDurationLabel(track) {
   const hasFullTrack = !!(track && (track.localUrl || getLocalAudioUrl(track.trackName) || (isYtReady && !useFallbackAudio)));
   return hasFullTrack ? 'Full' : '0:30';
@@ -1383,11 +1399,21 @@ function startProgressPolling() {
   progressPollInterval = setInterval(() => {
     let currentTime = 0;
     let duration = 0;
+    const currentTrack = tracks[currentTrackIndex];
     
     if (isHtml5AudioEngine()) {
       if (elMainAudio) {
         currentTime = elMainAudio.currentTime;
-        duration = elMainAudio.duration || 30;
+        duration = getCorrectedDuration(elMainAudio, currentTrack);
+        
+        // Handle double-duration bug manual advance in polling too
+        if (currentTrack && currentTrack.trackDuration && elMainAudio.duration > currentTrack.trackDuration * 1.5) {
+          if (currentTime >= currentTrack.trackDuration - 0.5) {
+            console.log("Accurate duration limit reached (polling), advancing track.");
+            nextTrack(true);
+            return;
+          }
+        }
       }
     } else {
       if (isYtReady && ytPlayer && isPlaying) {
@@ -1397,7 +1423,7 @@ function startProgressPolling() {
     }
     
     if (duration > 0) {
-      const progressPercent = (currentTime / duration) * 100;
+      const progressPercent = Math.min((currentTime / duration) * 100, 100);
       if (elProgressFill) elProgressFill.style.width = `${progressPercent}%`;
       
       if (elCurrentTimeDisplay) elCurrentTimeDisplay.textContent = formatTime(currentTime);
@@ -1419,13 +1445,17 @@ function setProgress(e) {
   if (!elProgressContainer) return;
   const width = elProgressContainer.clientWidth;
   const clickX = e.offsetX;
+  const currentTrack = tracks[currentTrackIndex];
   
   if (isHtml5AudioEngine()) {
-    if (elMainAudio && elMainAudio.duration > 0) {
-      const newTime = (clickX / width) * elMainAudio.duration;
-      elMainAudio.currentTime = newTime;
-      if (elCurrentTimeDisplay) elCurrentTimeDisplay.textContent = formatTime(newTime);
-      if (elProgressFill) elProgressFill.style.width = `${(clickX / width) * 100}%`;
+    if (elMainAudio) {
+      const duration = getCorrectedDuration(elMainAudio, currentTrack);
+      if (duration > 0) {
+        const newTime = (clickX / width) * duration;
+        elMainAudio.currentTime = newTime;
+        if (elCurrentTimeDisplay) elCurrentTimeDisplay.textContent = formatTime(newTime);
+        if (elProgressFill) elProgressFill.style.width = `${(clickX / width) * 100}%`;
+      }
     }
   } else {
     if (isYtReady && ytPlayer) {
@@ -1692,7 +1722,9 @@ function setupDOMEventListeners() {
       console.log("Audio metadata loaded. Duration:", elMainAudio.duration);
       if ((currentEngine === 'local' || currentEngine === 'itunes') && elMainAudio.duration) {
         if (elTotalDurationDisplay) {
-          elTotalDurationDisplay.textContent = formatTime(elMainAudio.duration);
+          const currentTrack = tracks[currentTrackIndex];
+          const displayDuration = getCorrectedDuration(elMainAudio, currentTrack);
+          elTotalDurationDisplay.textContent = formatTime(displayDuration);
         }
       }
     });
@@ -1701,21 +1733,52 @@ function setupDOMEventListeners() {
       console.log("Audio duration change. Duration:", elMainAudio.duration);
       if ((currentEngine === 'local' || currentEngine === 'itunes') && elMainAudio.duration) {
         if (elTotalDurationDisplay) {
-          elTotalDurationDisplay.textContent = formatTime(elMainAudio.duration);
+          const currentTrack = tracks[currentTrackIndex];
+          const displayDuration = getCorrectedDuration(elMainAudio, currentTrack);
+          elTotalDurationDisplay.textContent = formatTime(displayDuration);
         }
       }
     });
 
     elMainAudio.addEventListener('timeupdate', () => {
       if (currentEngine === 'local' || currentEngine === 'itunes') {
+        const currentTrack = tracks[currentTrackIndex];
         const currentTime = elMainAudio.currentTime;
-        const duration = elMainAudio.duration || 30;
+        let duration = getCorrectedDuration(elMainAudio, currentTrack);
+        
+        // Handle double-duration bug manual advance if we have accurate track duration
+        if (currentTrack && currentTrack.trackDuration && elMainAudio.duration > currentTrack.trackDuration * 1.5) {
+          if (currentTime >= currentTrack.trackDuration - 0.5) {
+            console.log("Accurate duration limit reached, advancing track.");
+            nextTrack(true);
+            return;
+          }
+        }
+        
+        // Fallback: Automatic stuck playback detection for local tracks without iTunes metadata
+        if (elMainAudio.duration > 30 && !elMainAudio.paused && isPlaying && elMainAudio.readyState >= 3 && !elMainAudio.seeking) {
+          if (currentTime === lastHtml5Time) {
+            html5TimeUnchangedCount++;
+            if (html5TimeUnchangedCount >= 5) { // Unchanged for ~1.25s (timeupdate fires ~4 times/sec)
+              const ratio = currentTime / elMainAudio.duration;
+              if (ratio >= 0.45 && ratio <= 0.55) {
+                console.warn("Double-duration bug detected (stuck around 50%). Forcing next track.");
+                html5TimeUnchangedCount = 0;
+                nextTrack(true);
+                return;
+              }
+            }
+          } else {
+            html5TimeUnchangedCount = 0;
+            lastHtml5Time = currentTime;
+          }
+        }
         
         if (duration > 0) {
-          const progressPercent = (currentTime / duration) * 100;
+          const progressPercent = Math.min((currentTime / duration) * 100, 100);
           if (elProgressFill) elProgressFill.style.width = `${progressPercent}%`;
           if (elCurrentTimeDisplay) elCurrentTimeDisplay.textContent = formatTime(currentTime);
-          if (elTotalDurationDisplay && elMainAudio.duration) {
+          if (elTotalDurationDisplay) {
             elTotalDurationDisplay.textContent = formatTime(duration);
           }
           syncLyricsHighlight(currentTime);
@@ -2080,7 +2143,8 @@ async function fetchSongsFromiTunes() {
           localUrl: localUrl,
           releaseDate: track.releaseDate,
           primaryGenreName: track.primaryGenreName || "R&B/Soul",
-          trackViewUrl: track.trackViewUrl || "https://music.apple.com/us/artist/jeff-bernat/487317660"
+          trackViewUrl: track.trackViewUrl || "https://music.apple.com/us/artist/jeff-bernat/487317660",
+          trackDuration: track.trackTimeMillis ? track.trackTimeMillis / 1000 : null
         };
       });
       
