@@ -4,6 +4,58 @@
 
 // --- 1. Global State Variables ---
 
+// --- Added for Redesign ---
+let playlists = [];
+let currentPlaylistFilter = 'all';
+let currentSort = 'date-desc';
+let appSettings = { playbackSpeed: 1.0 };
+let elProgressModal, elProgressText;
+
+// Helper: Extract ID3 tags using jsmediatags
+function extractMetadata(file) {
+  return new Promise((resolve) => {
+    if (typeof jsmediatags === 'undefined') {
+      resolve({ title: file.name.replace(/\.[^/.]+$/, ""), artist: "Unknown Artist", album: "Unknown Album", coverBlob: null, genre: "Local", year: new Date().getFullYear() });
+      return;
+    }
+    jsmediatags.read(file, {
+      onSuccess: function(tag) {
+        const tags = tag.tags;
+        let coverBlob = null;
+        if (tags.picture) {
+          const data = tags.picture.data;
+          const format = tags.picture.format;
+          const uint8Array = new Uint8Array(data);
+          coverBlob = new Blob([uint8Array], { type: format });
+        }
+        resolve({
+          title: tags.title || file.name.replace(/\.[^/.]+$/, ""),
+          artist: tags.artist || "Unknown Artist",
+          album: tags.album || "Unknown Album",
+          coverBlob: coverBlob,
+          genre: tags.genre || "Local",
+          year: tags.year || new Date().getFullYear()
+        });
+      },
+      onError: function(error) {
+        resolve({ title: file.name.replace(/\.[^/.]+$/, ""), artist: "Unknown Artist", album: "Unknown Album", coverBlob: null, genre: "Local", year: new Date().getFullYear() });
+      }
+    });
+  });
+}
+
+// Convert Blob to Base64
+function blobToBase64(blob) {
+  return new Promise((resolve, reject) => {
+    if (!blob) { resolve(null); return; }
+    const reader = new FileReader();
+    reader.onloadend = () => resolve(reader.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(blob);
+  });
+}
+
+
 
 
 
@@ -99,7 +151,6 @@ let elNextBtn = null;
 let elShuffleBtn = null;
 let elRepeatBtn = null;
 let elHeartCurrentBtn = null;
-let elItunesLink = null;
 let elTrackTitleMain = null;
 let elTrackAlbumMain = null;
 let elTrackYear = null;
@@ -190,7 +241,6 @@ const BACKUP_TRACKS = [
     trackName: "Call You Mine (feat. Geeks)",
     collectionName: "The Gentleman Approach",
     artworkUrl100: "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/ce/27/ef/ce27efc6-7a71-6c2e-4b61-9c60e334df58/artwork.jpg/400x400bb.jpg",
-    previewUrl: "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/91/97/81/91978189-9130-10db-ee83-7d848ce1c9e8/m4a.letterbox.dl.m4a",
     releaseDate: "2012-12-07T08:00:00Z",
     primaryGenreName: "R&B/Soul",
     trackViewUrl: "https://music.apple.com/us/album/call-you-mine-feat-geeks/588825838?i=588826011"
@@ -200,7 +250,6 @@ const BACKUP_TRACKS = [
     trackName: "Groovin",
     collectionName: "The Gentleman Approach",
     artworkUrl100: "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/ce/27/ef/ce27efc6-7a71-6c2e-4b61-9c60e334df58/artwork.jpg/400x400bb.jpg",
-    previewUrl: "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/80/42/cb/8042cb3a-59df-cae4-08fb-463d1e1f7481/m4a.letterbox.dl.m4a",
     releaseDate: "2012-12-07T08:00:00Z",
     primaryGenreName: "R&B/Soul",
     trackViewUrl: "https://music.apple.com/us/album/groovin/588825838?i=588826013"
@@ -210,7 +259,6 @@ const BACKUP_TRACKS = [
     trackName: "Pillow Talk",
     collectionName: "Modern Renaissance",
     artworkUrl100: "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/db/45/ad/db45ad7d-c07a-251c-4395-9ff2d973715c/artwork.jpg/400x400bb.jpg",
-    previewUrl: "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview115/v4/21/df/b4/21dfb4c7-1a48-6a56-b7ff-27c9d924f0c4/m4a.letterbox.dl.m4a",
     releaseDate: "2013-12-15T08:00:00Z",
     primaryGenreName: "R&B/Soul",
     trackViewUrl: "https://music.apple.com/us/album/pillow-talk/783935293?i=783935298"
@@ -220,7 +268,6 @@ const BACKUP_TRACKS = [
     trackName: "Cruisin",
     collectionName: "In the Meantime",
     artworkUrl100: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/f4/bf/16/f4bf168e-9080-60b6-11fc-db439563f458/artwork.jpg/400x400bb.jpg",
-    previewUrl: "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/fa/1c/9a/fa1c9a63-fb6a-72ef-4cc6-e630cc6784d7/m4a.letterbox.dl.m4a",
     releaseDate: "2016-01-16T08:00:00Z",
     primaryGenreName: "R&B/Soul",
     trackViewUrl: "https://music.apple.com/us/album/cruisin/1071988882?i=1071989040"
@@ -230,7 +277,6 @@ const BACKUP_TRACKS = [
     trackName: "Cool Girls",
     collectionName: "Modern Renaissance",
     artworkUrl100: "https://is1-ssl.mzstatic.com/image/thumb/Music124/v4/db/45/ad/db45ad7d-c07a-251c-4395-9ff2d973715c/artwork.jpg/400x400bb.jpg",
-    previewUrl: "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/91/9a/02/919a022f-d893-6c84-93ad-db05c755255f/m4a.letterbox.dl.m4a",
     releaseDate: "2013-12-15T08:00:00Z",
     primaryGenreName: "R&B/Soul",
     trackViewUrl: "https://music.apple.com/us/album/cool-girls/783935293?i=783935294"
@@ -240,7 +286,6 @@ const BACKUP_TRACKS = [
     trackName: "Just Vibe",
     collectionName: "The Gentleman Approach",
     artworkUrl100: "https://is1-ssl.mzstatic.com/image/thumb/Music115/v4/ce/27/ef/ce27efc6-7a71-6c2e-4b61-9c60e334df58/artwork.jpg/400x400bb.jpg",
-    previewUrl: "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview112/v4/96/cc/21/96cc21bf-de7e-a0e2-6ad0-cf227917d23d/m4a.letterbox.dl.m4a",
     releaseDate: "2012-12-07T08:00:00Z",
     primaryGenreName: "R&B/Soul",
     trackViewUrl: "https://music.apple.com/us/album/just-vibe/588825838?i=588826017"
@@ -250,7 +295,6 @@ const BACKUP_TRACKS = [
     trackName: "Changes",
     collectionName: "She Loves Me Not",
     artworkUrl100: "https://is1-ssl.mzstatic.com/image/thumb/Music112/v4/99/bd/27/99bd27df-6bf9-e30b-0447-38e55e09f583/artwork.jpg/400x400bb.jpg",
-    previewUrl: "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview112/v4/7f/7d/53/7f7d5351-4e78-9e5c-cb3a-7db195156a65/m4a.letterbox.dl.m4a",
     releaseDate: "2019-05-10T08:00:00Z",
     primaryGenreName: "R&B/Soul",
     trackViewUrl: "https://music.apple.com/us/album/changes/1460592813?i=1460593005"
@@ -260,7 +304,6 @@ const BACKUP_TRACKS = [
     trackName: "Still",
     collectionName: "In the Meantime",
     artworkUrl100: "https://is1-ssl.mzstatic.com/image/thumb/Music125/v4/f4/bf/16/f4bf168e-9080-60b6-11fc-db439563f458/artwork.jpg/400x400bb.jpg",
-    previewUrl: "https://audio-ssl.itunes.apple.com/itunes-assets/AudioPreview125/v4/b9/e7/70/b9e77035-7762-b9b5-4b10-09315d026be1/m4a.letterbox.dl.m4a",
     releaseDate: "2016-01-16T08:00:00Z",
     primaryGenreName: "R&B/Soul",
     trackViewUrl: "https://music.apple.com/us/album/still/1071988882?i=1071989043"
@@ -330,27 +373,7 @@ function populateAllLocalTracks() {
 // Instantly preload the backup tracks list so the page has tracks before API loads
 populateAllLocalTracks();
 
-// --- 5. YouTube Video Mapping Dictionary ---
-const YOUTUBE_IDS = {
-  callyoumine: "82g0sF-5-lI",
-  groovin: "wY2QpeM1Z_U",
-  pillowtalk: "L6iH3QeT4aU",
-  cruisin: "oP3g5hR1oG8",
-  coolgirls: "WkSw626X_6A",
-  justvibe: "x6_ZlY_Ym1E",
-  changes: "9P5vV-w6P1I",
-  still: "38a7oX_F8qE",
-  ifyouwonder: "lR6e3W7IqXI",
-  mssincerity: "Z1FmE8y8P3w",
-  mydear: "s3B8lYqF8zM",
-  wrongaboutforever: "N9m8v8X8z8A",
-  onceuponatime: "_W8vP9y8w8A",
-  beige: "z80pMntqTug",
-  workflow: "vP1e4ycrF-k",
-  dreamy: "kQ8gN-0qg9A",
-  sober: "w51tWpU7f5I",
-  withlove: "oP3g5hR1oG8"
-};
+
 
 
 
@@ -405,94 +428,7 @@ const PRESET_LYRICS = {
   ]
 };
 
-// --- 6. Global YouTube Iframe API Initialization Callback ---
-window.onYouTubeIframeAPIReady = function() {
-  ytPlayer = new YT.Player('yt-player', {
-    height: '120',
-    width: '200',
-    videoId: '82g0sF-5-lI', // Default is "Call You Mine"
-    playerVars: {
-      'playsinline': 1,
-      'controls': 0,
-      'disablekb': 1,
-      'fs': 0,
-      'rel': 0,
-      'showinfo': 0,
-      'modestbranding': 1,
-      'autoplay': 0,
-      'mute': 0,
-      'origin': window.location.origin
-    },
-    events: {
-      'onReady': onPlayerReady,
-      'onStateChange': onPlayerStateChange
-    }
-  });
-};
 
-function onPlayerReady(event) {
-  isYtReady = true;
-  useFallbackAudio = false; // YouTube is working fine!
-  
-  // Set volume matching UI slider if loaded
-  const volumeSlider = document.getElementById('player-volume');
-  if (volumeSlider && ytPlayer) {
-    ytPlayer.setVolume(parseInt(volumeSlider.value));
-  }
-  if (ytPlayer) {
-    ytPlayer.unMute();
-  }
-  console.log("YouTube API Player is loaded.");
-}
-
-function onPlayerStateChange(event) {
-  const playBtn = document.getElementById('play-btn');
-  const vinylRecord = document.getElementById('vinyl-record');
-  const tonearm = document.getElementById('tonearm');
-  const libraryList = document.getElementById('library-list');
-  
-  if (event.data === YT.PlayerState.PLAYING) {
-    isPlaying = true;
-    if (playBtn) playBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
-    if (vinylRecord) vinylRecord.classList.add('playing');
-    if (tonearm) tonearm.classList.add('active');
-    
-    triggerFloatingNotes();
-    startProgressPolling();
-    
-    if (ytPlayer) ytPlayer.unMute();
-    
-    if (libraryList) {
-      const activeCover = libraryList.querySelector('.song-item.active .song-item-cover');
-      if (activeCover) activeCover.innerHTML = '<i class="fa-solid fa-volume-high text-accent"></i>';
-    }
-  } else if (event.data === YT.PlayerState.PAUSED || event.data === YT.PlayerState.BUFFERING) {
-    isPlaying = false;
-    if (playBtn) playBtn.innerHTML = '<i class="fa-solid fa-play"></i>';
-    if (vinylRecord) vinylRecord.classList.remove('playing');
-    if (tonearm) tonearm.classList.remove('active');
-    
-    if (libraryList) {
-      const activeCover = libraryList.querySelector('.song-item.active .song-item-cover');
-      if (activeCover) activeCover.innerHTML = '';
-    }
-  } else if (event.data === YT.PlayerState.ENDED) {
-    if (vinylRecord) vinylRecord.classList.remove('playing');
-    if (tonearm) tonearm.classList.remove('active');
-    stopProgressPolling();
-    
-    if (libraryList) {
-      const activeCover = libraryList.querySelector('.song-item.active .song-item-cover');
-      if (activeCover) activeCover.innerHTML = '';
-    }
-    
-    if (isRepeat && ytPlayer) {
-      ytPlayer.playVideo();
-    } else {
-      nextTrack(true); // Force auto-advance play!
-    }
-  }
-}
 
 // --- 7. Playback & Engine API Functions (Global scope for safety) ---
 function getLocalAudioUrl(trackName) {
@@ -517,7 +453,7 @@ function getCorrectedDuration(audioElement, track) {
   if (!audioElement) return 30;
   let reportedDuration = audioElement.duration || 30;
   
-  // If we have a mathematically precise trackDuration (from AudioContext or iTunes API)
+  // If we have a mathematically precise trackDuration
   if (track && track.trackDuration && track.trackDuration > 0 && reportedDuration > 30) {
     if (Math.abs(reportedDuration - track.trackDuration) > 2) {
       return track.trackDuration;
@@ -1016,7 +952,6 @@ document.addEventListener('DOMContentLoaded', () => {
     elShuffleBtn = document.getElementById('shuffle-btn');
     elRepeatBtn = document.getElementById('repeat-btn');
     elHeartCurrentBtn = document.getElementById('heart-current-btn');
-    elItunesLink = document.getElementById('itunes-link');
     elTrackTitleMain = document.getElementById('player-track-title');
     elTrackAlbumMain = document.getElementById('player-track-album');
     elTrackYear = document.getElementById('player-track-year');
@@ -1039,9 +974,6 @@ document.addEventListener('DOMContentLoaded', () => {
     elMainAudio = document.getElementById('main-audio');
     
     // Engine selector caching
-    elEngineYoutube = document.getElementById('engine-btn-youtube');
-    elEngineLocal = document.getElementById('engine-btn-local');
-    elEngineItunes = document.getElementById('engine-btn-itunes');
     elLocalFileInput = document.getElementById('local-file-input');
     elImportBtnTrigger = document.getElementById('import-btn-trigger');
     elLocalImportZone = document.getElementById('local-import-zone');
@@ -1076,30 +1008,11 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof updateActiveAccentRgb === 'function') updateActiveAccentRgb();
 
     // --- Resilient Auto-fallback timer ---
-    // If YouTube doesn't load/fails within 2.5 seconds, lock HTML5 preview player.
-    // This guarantees sound and playability even with active adblockers!
-    setTimeout(() => {
-      if (!isYtReady) {
-        console.warn("YouTube blocked or slow. Activating reliable HTML5 Audio fallback engine.");
-        useFallbackAudio = true;
-        
-        // Update duration text to reflect 30 seconds
-        if (elTotalDurationDisplay) elTotalDurationDisplay.textContent = "0:30";
-        
-        showToast("Cozy Lounge Backup Mode 🌙", "ระบบเปิดสตรีมเสียงสำรองให้แล้วค่ะ เล่นได้ลื่นไหลไร้รอยต่อ 🎧");
-        
-        // Reload track details for fallback
-        loadTrack(currentTrackIndex);
-      }
-    }, 2500);
     
     // --- Welcome notification toast ---
     setTimeout(() => {
       showToast("Jeff Bernat Cozy Lounge 🌙", "ยินดีต้อนรับเข้าสู่ช่วงเวลากรูฟนุ่ม ๆ สไตล์ R&B ค่ะ");
     }, 1000);
-
-    // --- Perform Asynchronous iTunes API fetch in the background ---
-    fetchSongsFromiTunes();
   } catch (err) {
     console.error("Cozy Lounge Initialization crashed defensively: ", err);
   }
@@ -1145,7 +1058,7 @@ function setupDOMEventListeners() {
         }
       }
       
-      // Fallback: Automatic stuck playback detection for local tracks without iTunes metadata
+      // Fallback: Automatic stuck playback detection for local tracks
       if (elMainAudio.duration > 30 && !elMainAudio.paused && isPlaying && elMainAudio.readyState >= 3 && !elMainAudio.seeking) {
         if (currentTime === lastHtml5Time) {
           html5TimeUnchangedCount++;
@@ -1313,47 +1226,7 @@ function setupDOMEventListeners() {
     });
   }
 
-  // Engine switcher event bindings
-  if (elEngineYoutube) {
-    elEngineYoutube.addEventListener('click', () => {
-      if (!isYtReady) {
-        showToast("YouTube Not Ready ⚠️", "ระบบยังโหลดเครื่องเล่น YouTube ไม่เสร็จ หรือโดน Adblocker บล็อกค่ะ");
-        return;
-      }
-      currentEngine = 'youtube';
-      useFallbackAudio = false;
-      updateEngineSelectorUI();
-      showToast("Engine: YouTube 📺", "สลับไปเล่นสตรีมมิ่งจาก YouTube แล้วค่ะ");
-      if (isPlaying) playAudio();
-    });
-  }
-  
-  if (elEngineLocal) {
-    elEngineLocal.addEventListener('click', () => {
-      const currentTrack = tracks[currentTrackIndex];
-      const hasLocal = currentTrack && (currentTrack.localUrl || getLocalAudioUrl(currentTrack.trackName));
-      if (hasLocal) {
-        currentEngine = 'local';
-        useFallbackAudio = false;
-        updateEngineSelectorUI();
-        showToast("Engine: Local File 🎵", "สลับมาเล่นไฟล์คุณภาพสูงในเครื่องเรียบร้อยค่ะ");
-        if (isPlaying) playAudio();
-      } else {
-        showToast("No Local File ⚠️", "เพลงนี้ยังไม่มีไฟล์ในเครื่อง ดาวน์โหลดมาใส่ในโฟลเดอร์ music ได้เลยค่ะ!");
-      }
-    });
-  }
-  
-  if (elEngineItunes) {
-    elEngineItunes.addEventListener('click', () => {
-      currentEngine = 'itunes';
-      useFallbackAudio = true;
-      updateEngineSelectorUI();
-      showToast("Engine: iTunes 30s 🍎", "สลับมาเล่นพรีวิวจากเซิร์ฟเวอร์ iTunes แล้วค่ะ");
-      if (isPlaying) playAudio();
-    });
-  }
-  
+
   // Local File Import events
   if (elImportBtnTrigger && elLocalFileInput) {
     elImportBtnTrigger.addEventListener('click', () => {
@@ -1393,6 +1266,25 @@ function setupDOMEventListeners() {
 }
 
 // --- 14. Library & Discography UI Renderer Functions ---
+
+function renderPlaylistsNav() {
+  const container = document.getElementById('playlist-nav-container');
+  if (!container) return;
+  container.innerHTML = '';
+  playlists.forEach(pl => {
+    const li = document.createElement('li');
+    li.innerHTML = `<i class="fa-solid fa-music"></i> ${pl.name}`;
+    li.style.paddingLeft = "30px";
+    li.style.cursor = "pointer";
+    li.onclick = () => {
+      currentPlaylistFilter = pl.id;
+      currentFolderFilter = 'all';
+      renderLibrary();
+    };
+    container.appendChild(li);
+  });
+}
+
 function renderLibrary() {
   if (!elLibraryList) return;
   elLibraryList.innerHTML = '';
@@ -1501,7 +1393,7 @@ function renderAlbumShelf() {
   });
 }
 
-// --- 15. Fetch Data from iTunes Store ---
+
 
 
 // --- 16. Volume System ---
@@ -1514,7 +1406,7 @@ function handleVolumeChange() {
     elMainAudio.volume = vol / 100;
   }
   
-  // Update YouTube volume (0 to 100)
+  
   if (isYtReady && ytPlayer) {
     ytPlayer.setVolume(vol);
     if (vol == 0) ytPlayer.mute();
@@ -2289,13 +2181,10 @@ function updateMediaSessionMetadata(track) {
         { src: absoluteCoverUrl, sizes: '256x256', type: 'image/png' },
         { src: absoluteCoverUrl, sizes: '512x512', type: 'image/png' }
       ];
-      
-      // Add iTunes artwork as a high-quality fallback if available
+      // Add large artwork if available
       if (track.artworkUrl100) {
-        const itunesLarge = track.artworkUrl100.replace('100x100', '512x512');
-        artworkList.push({ src: itunesLarge, sizes: '512x512', type: 'image/jpeg' });
+        artworkList.push({ src: track.artworkUrl100, sizes: '512x512', type: 'image/jpeg' });
       }
-      
       navigator.mediaSession.metadata = new MediaMetadata({
         title: track.trackName,
         artist: 'Jeff Bernat',
@@ -2409,28 +2298,41 @@ function resolveTracksList() {
 
 function initIndexedDB() {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open('CozyPlayerDB', 1);
+    // Upgraded to Version 2 for Playlists Support
+    const request = indexedDB.open('CozyPlayerDB', 2);
     
-    request.onerror = (e) => {
-      console.error("IndexedDB open error:", e.target.error);
-      reject(e.target.error);
+    request.onerror = (event) => {
+      console.error("IndexedDB error:", event.target.error);
+      reject(event.target.error);
     };
     
-    request.onsuccess = (e) => {
-      cozyDB = e.target.result;
-      console.log("CozyPlayerDB Opened Successfully.");
+    request.onsuccess = (event) => {
+      cozyDB = event.target.result;
       resolve(cozyDB);
     };
     
-    request.onupgradeneeded = (e) => {
-      const dbInstance = e.target.result;
-      if (!dbInstance.objectStoreNames.contains('custom_tracks')) {
-        dbInstance.createObjectStore('custom_tracks', { keyPath: 'trackId' });
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
+      const oldVersion = event.oldVersion;
+      
+      if (oldVersion < 1) {
+        if (!db.objectStoreNames.contains('custom_tracks')) {
+          db.createObjectStore('custom_tracks', { keyPath: 'trackId' });
+        }
       }
-      console.log("CozyPlayerDB Upgrade/Setup Completed.");
+      
+      if (oldVersion < 2) {
+        if (!db.objectStoreNames.contains('playlists')) {
+          db.createObjectStore('playlists', { keyPath: 'id' });
+        }
+        if (!db.objectStoreNames.contains('settings')) {
+          db.createObjectStore('settings', { keyPath: 'key' });
+        }
+      }
     };
   });
 }
+
 
 // 2. Load custom tracks from IndexedDB and resolve Blob URLs
 async function loadCustomTracksFromDB() {
@@ -3443,3 +3345,244 @@ function updateRomanticParticles(currentTheme) {
     console.log("💖 Romantic Features initialized: Love Confetti, Floating Quotes, Sakura Petals, Candle Sparks");
   }
 })();
+
+
+
+function openContextMenu(e, trackId) {
+  const menu = document.getElementById('track-context-menu');
+  if (!menu) return;
+  menu.style.display = 'flex';
+  
+  // Position menu
+  let x = e.clientX;
+  let y = e.clientY;
+  
+  // Adjust if out of bounds
+  if (x + 200 > window.innerWidth) x = window.innerWidth - 200;
+  if (y + 300 > window.innerHeight) y = window.innerHeight - 300;
+  
+  menu.style.left = `${x}px`;
+  menu.style.top = `${y}px`;
+  
+  // Attach trackId to the menu
+  menu.dataset.trackId = trackId;
+  
+  // Populate Folders
+  const folderOpt = document.getElementById('ctx-folder-options');
+  if (folderOpt) {
+    const folders = [...new Set(customTracks.map(t => t.folder || 'Uncategorized'))];
+    folderOpt.innerHTML = `<button id="ctx-new-folder"><i class="fa-solid fa-plus"></i> แฟ้มใหม่...</button><div class="ctx-divider"></div>`;
+    folders.forEach(f => {
+      folderOpt.innerHTML += `<button onclick="moveTrackToFolder('${trackId}', '${f}')"><i class="fa-regular fa-folder"></i> ${f}</button>`;
+    });
+    
+    document.getElementById('ctx-new-folder').onclick = () => {
+      const folderName = prompt("ใส่ชื่อโฟลเดอร์ใหม่:");
+      if (folderName) moveTrackToFolder(trackId, folderName.trim());
+    };
+  }
+}
+
+function moveTrackToFolder(trackId, folderName) {
+  const track = customTracks.find(t => t.trackId === trackId);
+  if (track) {
+    track.folder = folderName;
+    saveCustomTrackToDB(track);
+    document.getElementById('track-context-menu').style.display = 'none';
+    updateFolderDropdowns();
+    renderLibrary();
+    showToast("สำเร็จ 🎉", `ย้ายเพลงไปที่โฟลเดอร์ ${folderName} แล้ว`);
+  }
+}
+
+// Close Context Menu on outside click
+document.addEventListener('click', (e) => {
+  const menu = document.getElementById('track-context-menu');
+  if (menu && menu.style.display === 'flex' && !e.target.closest('.context-menu')) {
+    menu.style.display = 'none';
+  }
+});
+
+// Setup Playback Speed and Mini Player global hooks
+document.addEventListener('DOMContentLoaded', () => {
+  const speedBtn = document.getElementById('btn-playback-speed');
+  if (speedBtn) {
+    let speeds = [1.0, 1.25, 1.5, 2.0, 0.5];
+    let currentSpeedIdx = 0;
+    speedBtn.addEventListener('click', () => {
+      currentSpeedIdx = (currentSpeedIdx + 1) % speeds.length;
+      appSettings.playbackSpeed = speeds[currentSpeedIdx];
+      speedBtn.textContent = appSettings.playbackSpeed + 'x';
+      if (elMainAudio) elMainAudio.playbackRate = appSettings.playbackSpeed;
+    });
+  }
+  
+  const miniBtn = document.getElementById('btn-mini-player');
+  if (miniBtn) {
+    miniBtn.addEventListener('click', () => {
+      document.body.classList.toggle('mini-player-active');
+    });
+  }
+  
+  // Library Search and Filters
+  const libSearch = document.getElementById('lib-search');
+  if (libSearch) libSearch.addEventListener('input', renderLibrary);
+  
+  const libSort = document.getElementById('lib-sort-select');
+  if (libSort) {
+    libSort.addEventListener('change', () => {
+      currentSort = libSort.value;
+      renderLibrary();
+    });
+  }
+  
+  // Keyboard Shortcuts
+  document.addEventListener('keydown', (e) => {
+    // Prevent if typing in an input
+    if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+    
+    if (e.code === 'Space') {
+      e.preventDefault();
+      isPlaying ? pauseAudio() : playAudio();
+    } else if (e.code === 'ArrowRight') {
+      e.preventDefault();
+      nextTrack();
+    } else if (e.code === 'ArrowLeft') {
+      e.preventDefault();
+      prevTrack();
+    }
+  });
+});
+
+
+
+// --- Data Management (Backup / Restore) ---
+document.addEventListener('DOMContentLoaded', () => {
+  const btnBackup = document.getElementById('btn-backup-db');
+  const btnRestore = document.getElementById('btn-restore-db');
+  const fileInput = document.getElementById('restore-file-input');
+
+  if (btnBackup) {
+    btnBackup.addEventListener('click', () => {
+      // Export metadata (without heavy binary blobs)
+      const exportData = customTracks.map(t => {
+        const tCopy = { ...t };
+        delete tCopy.file; // Don't export raw File objects
+        // We will keep artworkUrl100 (which is base64), but it could be huge.
+        // It's acceptable for standard JSON backup.
+        return tCopy;
+      });
+      
+      const backupObj = {
+        version: 2,
+        tracks: exportData,
+        playlists: playlists
+      };
+      
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(backupObj));
+      const downloadAnchorNode = document.createElement('a');
+      downloadAnchorNode.setAttribute("href",     dataStr);
+      downloadAnchorNode.setAttribute("download", "cozy_music_backup_" + Date.now() + ".json");
+      document.body.appendChild(downloadAnchorNode);
+      downloadAnchorNode.click();
+      downloadAnchorNode.remove();
+      showToast("แบ็คอัพสำเร็จ 💾", "ดาวน์โหลดไฟล์ข้อมูลเพลงเรียบร้อยแล้ว");
+    });
+  }
+
+  if (btnRestore && fileInput) {
+    btnRestore.addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        try {
+          const backupObj = JSON.parse(e.target.result);
+          if (backupObj && backupObj.tracks) {
+            // Merge tracks
+            let added = 0;
+            const t = cozyDB.transaction(['custom_tracks', 'playlists'], 'readwrite');
+            const trackStore = t.objectStore('custom_tracks');
+            backupObj.tracks.forEach(track => {
+              if (!customTracks.find(existing => existing.trackId === track.trackId)) {
+                trackStore.put(track);
+                customTracks.push(track);
+                added++;
+              }
+            });
+            
+            if (backupObj.playlists) {
+              const pStore = t.objectStore('playlists');
+              backupObj.playlists.forEach(pl => {
+                if (!playlists.find(existing => existing.id === pl.id)) {
+                  pStore.put(pl);
+                  playlists.push(pl);
+                }
+              });
+            }
+            
+            t.oncomplete = () => {
+              showToast("กู้คืนสำเร็จ ♻️", `กู้คืนข้อมูลเพลง ${added} รายการแล้ว (ไฟล์เสียงจริงต้องอัพโหลดใหม่ผ่านโฟลเดอร์เดิม)`);
+              renderLibrary();
+              renderPlaylistsNav();
+              updateFolderDropdowns();
+            };
+          }
+        } catch(err) {
+          showToast("ข้อผิดพลาด", "ไฟล์ Backup ไม่ถูกต้อง");
+          console.error(err);
+        }
+      };
+      reader.readAsText(file);
+    });
+  }
+});
+
+
+
+// Context Menu Actions Handlers
+document.addEventListener('DOMContentLoaded', () => {
+  const ctxPlay = document.getElementById('ctx-play');
+  const ctxFav = document.getElementById('ctx-fav');
+  const ctxDelete = document.getElementById('ctx-delete');
+  const menu = document.getElementById('track-context-menu');
+  
+  if (ctxPlay) {
+    ctxPlay.addEventListener('click', () => {
+      const trackId = menu.dataset.trackId;
+      const index = tracks.findIndex(t => t.trackId === trackId);
+      if (index !== -1) {
+        loadTrack(index);
+        playAudio();
+      }
+      menu.style.display = 'none';
+    });
+  }
+  
+  if (ctxFav) {
+    ctxFav.addEventListener('click', () => {
+      const trackId = menu.dataset.trackId;
+      const track = customTracks.find(t => t.trackId === trackId);
+      if (track) {
+        track.isFavorite = !track.isFavorite;
+        saveCustomTrackToDB(track);
+        renderLibrary();
+      }
+      menu.style.display = 'none';
+    });
+  }
+  
+  if (ctxDelete) {
+    ctxDelete.addEventListener('click', () => {
+      const trackId = menu.dataset.trackId;
+      if (confirm("คุณแน่ใจหรือไม่ว่าต้องการลบเพลงนี้ออกจากระบบ?")) {
+        deleteCustomTrackFromDB(trackId); // Delete from DB
+        const idx = customTracks.findIndex(t => t.trackId === trackId);
+        if (idx > -1) customTracks.splice(idx, 1);
+        renderLibrary();
+      }
+      menu.style.display = 'none';
+    });
+  }
+});

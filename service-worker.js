@@ -60,7 +60,7 @@ self.addEventListener('fetch', (event) => {
   // Skip non-GET requests
   if (event.request.method !== 'GET') return;
 
-  // Skip cross-origin requests (CDNs, YouTube API, MQTT, iTunes API, etc.)
+  // Skip cross-origin requests
   if (url.origin !== self.location.origin) return;
 
   // Skip music files — they are too large to cache and stream fine on their own

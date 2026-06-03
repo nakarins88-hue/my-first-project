@@ -1745,19 +1745,9 @@ body[data-session="study-glow"] .player-panel {
   box-shadow: 0 0 10px rgba(56, 189, 248, 0.15);
 }
 
-#engine-btn-youtube.active {
-  background: rgba(239, 68, 68, 0.1);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.2);
-  box-shadow: 0 0 10px rgba(239, 68, 68, 0.15);
-}
 
-#engine-btn-itunes.active {
-  background: rgba(251, 191, 36, 0.1);
-  color: #fbbf24;
-  border: 1px solid rgba(251, 191, 36, 0.2);
-  box-shadow: 0 0 10px rgba(251, 191, 36, 0.15);
-}
+
+
 
 .engine-pill.disabled {
   opacity: 0.25;
@@ -3457,4 +3447,170 @@ body.light-mode.theme-candle {
   --text-main: #451a03;
   --text-sub: #92400e;
   --glow-color: rgba(251, 191, 36, 0.1);
+}
+
+
+/* Context Menu */
+.context-menu {
+  position: absolute;
+  background: rgba(30, 30, 35, 0.95);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  padding: 8px;
+  min-width: 200px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.context-menu button {
+  background: none;
+  border: none;
+  color: #fff;
+  text-align: left;
+  padding: 10px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: inherit;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.context-menu button:hover {
+  background: rgba(255, 255, 255, 0.1);
+}
+
+.context-menu button.text-danger {
+  color: #ff6b6b;
+}
+
+.context-menu button.text-danger:hover {
+  background: rgba(255, 107, 107, 0.1);
+}
+
+.ctx-divider {
+  height: 1px;
+  background: rgba(255, 255, 255, 0.1);
+  margin: 5px 0;
+}
+
+.ctx-submenu {
+  position: relative;
+}
+
+.ctx-submenu > button {
+  width: 100%;
+}
+
+.ctx-arrow {
+  margin-left: auto;
+  font-size: 0.7em;
+  opacity: 0.5;
+}
+
+.ctx-submenu-content {
+  display: none;
+  position: absolute;
+  top: 0;
+  left: 100%;
+  background: rgba(30, 30, 35, 0.95);
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  min-width: 180px;
+  padding: 8px;
+  margin-left: 5px;
+}
+
+.ctx-submenu:hover .ctx-submenu-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* Nav Links Extensions */
+.nav-section-title {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  opacity: 0.5;
+  margin-top: 20px;
+  margin-bottom: 5px;
+  padding: 0 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.icon-btn-small {
+  background: none;
+  border: none;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+.icon-btn-small:hover {
+  opacity: 1;
+}
+
+/* Mini Player Mode */
+body.mini-player-active .app-container {
+  display: flex;
+  flex-direction: column;
+}
+body.mini-player-active .sidebar,
+body.mini-player-active .main-content {
+  display: none !important;
+}
+body.mini-player-active .player-bar {
+  position: relative;
+  width: 400px;
+  height: auto;
+  margin: 20px auto;
+  border-radius: 20px;
+  flex-direction: column;
+  padding: 20px;
+  background: rgba(20, 20, 25, 0.9);
+}
+body.mini-player-active .player-track-info {
+  width: 100%;
+  flex-direction: column;
+  text-align: center;
+  margin-bottom: 20px;
+}
+body.mini-player-active .player-cover {
+  width: 200px;
+  height: 200px;
+  border-radius: 15px;
+  margin-bottom: 15px;
+}
+body.mini-player-active .player-controls {
+  width: 100%;
+  justify-content: center;
+}
+body.mini-player-active .player-volume-control {
+  width: 100%;
+  justify-content: center;
+  margin-top: 15px;
+}
+
+/* Checkboxes */
+td input[type="checkbox"],
+th input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* Progress Modal */
+.modal-content.small-modal {
+  max-width: 400px;
+  text-align: center;
 }

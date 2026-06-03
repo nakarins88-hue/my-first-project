@@ -309,11 +309,6 @@
               <i class="fa-solid fa-volume-low volume-icon" id="player-volume-icon"></i>
               <input type="range" id="player-volume" class="volume-slider small" min="0" max="100" value="80">
             </div>
-
-            <!-- External share/iTunes link -->
-            <a href="https://music.apple.com/us/artist/jeff-bernat/487317660" target="_blank" class="sub-btn" id="itunes-link" title="Open in Apple Music" aria-label="เปิดฟังในแอปเปิ้ลมิวสิค">
-              <i class="fa-brands fa-apple"></i>
-            </a>
           </div>
 
         </div>
@@ -471,7 +466,14 @@
       </div>
 
       <!-- Catalog Table Grid section -->
-      <div class="db-section glass-card flex-grow db-catalog-section">
+      
+          <div class="form-actions" style="margin-top: 30px; justify-content: flex-start; gap: 10px;">
+            <button type="button" class="lounge-btn secondary-btn" id="btn-backup-db"><i class="fa-solid fa-download"></i> สำรองข้อมูล (Backup)</button>
+            <button type="button" class="lounge-btn secondary-btn" id="btn-restore-db"><i class="fa-solid fa-upload"></i> กู้คืนข้อมูล (Restore)</button>
+            <input type="file" id="restore-file-input" accept=".json" style="display: none;">
+          </div>
+    
+<div class="db-section glass-card flex-grow db-catalog-section">
         <div class="catalog-header">
           <h3><i class="fa-solid fa-compact-disc text-accent"></i> รายการเพลงในคลังทั้งหมดของคุณ</h3>
           
@@ -493,6 +495,7 @@
           <table class="catalog-table" id="db-catalog-table">
             <thead>
               <tr>
+                <th width="40"><input type="checkbox" id="selectAllTracks"></th>
                 <th>ภาพปก</th>
                 <th>ชื่อเพลง</th>
                 <th>อัลบั้ม</th>
@@ -556,11 +559,50 @@
   <!-- Audio Elements -->
   <audio id="main-audio"></audio>
   
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
   <!-- Main JavaScript File -->
-  <script src="player-v8.js?v=17"></script>
+  <script src="player-v8.js?v=18"></script>
   
   <!-- Real-time Visitor Counter Integration -->
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
   <script src="visitor-counter.js?v=1"></script>
+
+  <!-- Context Menu -->
+  <div id="track-context-menu" class="context-menu" style="display: none;">
+    <button id="ctx-play"><i class="fa-solid fa-play"></i> เล่นเดี๋ยวนี้</button>
+    <button id="ctx-fav"><i class="fa-solid fa-heart"></i> เพิ่มลงรายการโปรด</button>
+    <div class="ctx-divider"></div>
+    <div class="ctx-submenu">
+      <button><i class="fa-solid fa-list"></i> เพิ่มลงเพลย์ลิสต์ <i class="fa-solid fa-chevron-right ctx-arrow"></i></button>
+      <div class="ctx-submenu-content" id="ctx-playlist-options">
+        <button id="ctx-new-playlist"><i class="fa-solid fa-plus"></i> สร้างเพลย์ลิสต์ใหม่</button>
+        <div class="ctx-divider"></div>
+        <!-- Dynamic playlists -->
+      </div>
+    </div>
+    <div class="ctx-submenu">
+      <button><i class="fa-solid fa-folder"></i> ย้ายไปโฟลเดอร์ <i class="fa-solid fa-chevron-right ctx-arrow"></i></button>
+      <div class="ctx-submenu-content" id="ctx-folder-options">
+        <button id="ctx-new-folder"><i class="fa-solid fa-plus"></i> แฟ้มใหม่...</button>
+        <div class="ctx-divider"></div>
+        <!-- Dynamic folders -->
+      </div>
+    </div>
+    <div class="ctx-divider"></div>
+    <button id="ctx-edit"><i class="fa-solid fa-pen"></i> แก้ไขข้อมูลเพลง</button>
+    <button id="ctx-delete" class="text-danger"><i class="fa-solid fa-trash"></i> ลบเพลง</button>
+  </div>
+  
+  <!-- Upload Progress Modal -->
+  <div class="modal-overlay" id="upload-progress-modal">
+    <div class="modal-content small-modal">
+      <h3><i class="fa-solid fa-cloud-arrow-up"></i> กำลังประมวลผลไฟล์...</h3>
+      <p id="upload-status-text">อ่านข้อมูลเพลง 0 / 0</p>
+      <div class="progress-bar-container" style="height: 10px; margin: 15px 0; background: rgba(255,255,255,0.1); border-radius: 5px;">
+        <div class="progress-bar-fill" id="upload-progress-fill" style="width: 0%; height: 100%; background: var(--accent-color); border-radius: 5px; transition: width 0.3s;"></div>
+      </div>
+    </div>
+  </div>
+    
 </body>
 </html>
