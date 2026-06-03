@@ -10,6 +10,8 @@ let currentPlaylistFilter = 'all';
 let currentSort = 'date-desc';
 let appSettings = { playbackSpeed: 1.0 };
 let elProgressModal, elProgressText;
+let LOCAL_FILE_NAMES = [];
+let allBaseTracks = [];
 
 // Helper: Extract ID3 tags using jsmediatags
 function extractMetadata(file) {
@@ -933,6 +935,20 @@ function triggerFloatingNotes() {
   }, 2500);
 }
 
+// Fetches songs.json and populates LOCAL_FILE_NAMES before the player initializes
+async function loadSongsJSON() {
+  try {
+    const res = await fetch('songs.json');
+    if (!res.ok) throw new Error('songs.json not found');
+    const songs = await res.json();
+    LOCAL_FILE_NAMES = songs.map(s => s.filename);
+  } catch (e) {
+    console.warn('songs.json load failed, playlist will be empty:', e);
+    LOCAL_FILE_NAMES = [];
+  }
+  populateAllLocalTracks();
+}
+
 // --- 12. DOMContentLoaded Callback (App bootstrapping) ---
 document.addEventListener('DOMContentLoaded', () => {
   console.log("DOM loaded. Binding caches defensively.");
@@ -979,13 +995,15 @@ document.addEventListener('DOMContentLoaded', () => {
     elLocalImportZone = document.getElementById('local-import-zone');
 
     // --- Initialize Cozy Music Manager Dashboard & Catalog ---
-    if (typeof initCozyDashboard === 'function') {
-      initCozyDashboard();
-    } else {
-      renderLibrary();
-      renderAlbumShelf();
-      loadTrack(0);
-    }
+    loadSongsJSON().then(() => {
+      if (typeof initCozyDashboard === 'function') {
+        initCozyDashboard();
+      } else {
+        renderLibrary();
+        renderAlbumShelf();
+        loadTrack(0);
+      }
+    });
 
     // --- Dynamic Particle/Weather Canvas System ---
     setupCanvasVisuals();
@@ -2287,13 +2305,11 @@ function initMobileNavigation() {
 
 // Central tracks state resolver (incorporates built-in, custom, and excludes hidden)
 function resolveTracksList() {
-  tracks = [];
-  
-  // Filter out hidden custom tracks
-  const visibleCustom = customTracks.filter(t => !hiddenTrackIds.includes(t.trackId));
-  tracks = [...visibleCustom];
-  
-  console.log(`Resolved library: ${tracks.length} local tracks.`);
+  const hidden = hiddenTrackIds || [];
+  const visibleBuiltin = (allBaseTracks || []).filter(t => !hidden.includes(t.trackId));
+  const visibleCustom = (customTracks || []).filter(t => !hidden.includes(t.trackId));
+  tracks = [...visibleBuiltin, ...visibleCustom];
+  console.log(`Resolved library: ${tracks.length} tracks (${visibleBuiltin.length} built-in + ${visibleCustom.length} custom).`);
 }
 
 function initIndexedDB() {
