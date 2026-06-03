@@ -3614,3 +3614,223 @@ th input[type="checkbox"] {
   max-width: 400px;
   text-align: center;
 }
+
+/* ==========================================================================
+   Romantic & Modern Upgrade — Rose Palette + Enhanced Glassmorphism
+   ========================================================================== */
+
+/* Override default (rain) theme to warm romantic rose */
+:root,
+body.theme-rain {
+  --bg-primary:    #0d0912;
+  --bg-secondary:  #13091d;
+  --accent:        #f472b6;
+  --accent-hover:  #ec4899;
+  --accent-rgb:    244, 114, 182;
+  --panel-bg:      rgba(20, 10, 30, 0.74);
+  --glow-color:    rgba(244, 114, 182, 0.12);
+  --text-main:     #fdf2f8;
+  --text-sub:      #c4a8cc;
+  --accent-glow:   0 8px 30px rgba(244, 114, 182, 0.35);
+  --card-hover-bg: rgba(244, 114, 182, 0.04);
+}
+
+/* Sakura → deeper pink blossom */
+body.theme-sakura {
+  --bg-primary:    #0e0810;
+  --bg-secondary:  #180f20;
+  --accent:        #f9a8d4;
+  --accent-hover:  #f472b6;
+  --accent-rgb:    249, 168, 212;
+  --panel-bg:      rgba(24, 15, 32, 0.74);
+  --glow-color:    rgba(249, 168, 212, 0.15);
+  --text-main:     #fdf2f8;
+  --text-sub:      #d8b0d8;
+  --accent-glow:   0 8px 30px rgba(249, 168, 212, 0.4);
+}
+
+/* Candle → warm amber glow */
+body.theme-candle {
+  --bg-primary:    #120808;
+  --bg-secondary:  #1e0f0e;
+  --accent:        #fb923c;
+  --accent-hover:  #f97316;
+  --accent-rgb:    251, 146, 60;
+  --panel-bg:      rgba(30, 15, 14, 0.74);
+  --glow-color:    rgba(251, 146, 60, 0.15);
+  --text-main:     #fff7ed;
+  --text-sub:      #c9a070;
+  --accent-glow:   0 8px 30px rgba(251, 146, 60, 0.4);
+}
+
+/* Enhanced glassmorphism for all panels */
+.glass-panel {
+  background: var(--panel-bg) !important;
+  backdrop-filter: blur(28px) saturate(150%) !important;
+  -webkit-backdrop-filter: blur(28px) saturate(150%) !important;
+  border: 1px solid rgba(255, 255, 255, 0.09) !important;
+  box-shadow:
+    0 22px 48px rgba(0, 0, 0, 0.32),
+    inset 0 1px 0 rgba(255, 255, 255, 0.07) !important;
+}
+
+/* Play button → rose gradient */
+.play-pause-btn {
+  background: linear-gradient(135deg,
+    rgba(var(--accent-rgb), 0.95) 0%,
+    rgba(var(--accent-rgb), 0.7) 100%) !important;
+  color: #fff !important;
+  box-shadow:
+    0 6px 24px rgba(var(--accent-rgb), 0.45),
+    0 0 0 1px rgba(var(--accent-rgb), 0.18) !important;
+  transition: transform 0.2s ease, box-shadow 0.3s ease !important;
+}
+.play-pause-btn:hover {
+  transform: scale(1.1) !important;
+  box-shadow:
+    0 10px 32px rgba(var(--accent-rgb), 0.6),
+    0 0 0 2px rgba(var(--accent-rgb), 0.25) !important;
+}
+
+/* Elegant serif brand */
+.brand-title {
+  font-family: var(--font-serif) !important;
+  font-style: italic;
+  font-size: 2.1rem !important;
+}
+.accent-text {
+  color: rgba(var(--accent-rgb), 0.95) !important;
+}
+
+/* Rose progress bar */
+.progress-bar-fill {
+  background: linear-gradient(to right,
+    rgba(var(--accent-rgb), 0.5),
+    rgba(var(--accent-rgb), 1)) !important;
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.45) !important;
+}
+
+/* Playing vinyl romantic glow */
+.vinyl-record.playing {
+  box-shadow:
+    0 0 0 4px rgba(var(--accent-rgb), 0.14),
+    0 0 35px rgba(var(--accent-rgb), 0.22),
+    0 8px 25px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Song items: smooth slide hover */
+.song-item {
+  transition: transform 0.2s ease, background 0.2s ease, border-color 0.2s ease !important;
+}
+.song-item:hover {
+  background: rgba(var(--accent-rgb), 0.06) !important;
+  border-color: rgba(var(--accent-rgb), 0.15) !important;
+  transform: translateX(4px) !important;
+}
+
+/* Lyric active → rose glow */
+.lyric-line.active {
+  color: rgba(var(--accent-rgb), 0.98) !important;
+  border-left-color: rgba(var(--accent-rgb), 0.9) !important;
+  text-shadow: 0 0 22px rgba(var(--accent-rgb), 0.4) !important;
+}
+
+/* Mood button active → rose pill */
+.mood-btn.active {
+  background: linear-gradient(135deg,
+    rgba(var(--accent-rgb), 0.22) 0%,
+    rgba(var(--accent-rgb), 0.1) 100%) !important;
+  color: rgba(var(--accent-rgb), 1) !important;
+  border: 1px solid rgba(var(--accent-rgb), 0.35) !important;
+  box-shadow: 0 4px 15px rgba(var(--accent-rgb), 0.15) !important;
+}
+
+/* Toast border tint */
+.cozy-toast {
+  border-color: rgba(var(--accent-rgb), 0.2) !important;
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(var(--accent-rgb), 0.08) !important;
+}
+
+/* ==========================================================================
+   Dedication Banner
+   ========================================================================== */
+
+.dedication-banner {
+  position: sticky;
+  top: 0;
+  z-index: 5000;
+  background: linear-gradient(90deg,
+    rgba(var(--accent-rgb), 0.14) 0%,
+    rgba(var(--accent-rgb), 0.07) 50%,
+    rgba(var(--accent-rgb), 0.14) 100%);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  border-bottom: 1px solid rgba(var(--accent-rgb), 0.2);
+  padding: 9px 24px;
+  text-align: center;
+  font-family: var(--font-serif);
+  font-style: italic;
+  font-size: 0.88rem;
+  color: rgba(var(--accent-rgb), 0.95);
+  letter-spacing: 0.05em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  user-select: none;
+  transition: background 0.8s ease;
+}
+
+.dedication-banner strong {
+  font-style: normal;
+  font-weight: 700;
+  font-family: var(--font-sans);
+  letter-spacing: 0.04em;
+}
+
+.dedication-banner .ded-heart {
+  font-style: normal;
+  font-size: 1.1rem;
+  animation: dedHeartBeat 2.4s ease-in-out infinite;
+}
+
+@keyframes dedHeartBeat {
+  0%, 100% { transform: scale(1);    }
+  14%       { transform: scale(1.28); }
+  28%       { transform: scale(1);    }
+  42%       { transform: scale(1.18); }
+  56%       { transform: scale(1);    }
+}
+
+/* ==========================================================================
+   Floating Hearts — music-playing body state
+   ========================================================================== */
+
+.floating-hearts {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 0;
+  overflow: hidden;
+}
+
+.heart-particle {
+  position: absolute;
+  bottom: -60px;
+  opacity: 0;
+  animation: heartFloatUp linear forwards;
+  user-select: none;
+  will-change: transform, opacity;
+}
+
+@keyframes heartFloatUp {
+  0%   { transform: translateY(0)     scale(0.4) rotate(-12deg); opacity: 0; }
+  10%  { opacity: 0.5; }
+  80%  { opacity: 0.3; }
+  100% { transform: translateY(-105vh) scale(1.1) rotate(12deg); opacity: 0; }
+}

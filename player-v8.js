@@ -13,6 +13,48 @@ let elProgressModal, elProgressText;
 let LOCAL_FILE_NAMES = [];
 let allBaseTracks = [];
 
+// --- Storage Keys ---
+const STORAGE_KEY_SESSION = 'cozy_session_preset';
+const STORAGE_KEY_THEME   = 'cozy_theme';
+const STORAGE_KEY_HIDDEN  = 'cozy_hidden_tracks';
+
+// --- Playback & Library State ---
+let tracks            = [];
+let favorites         = [];
+let customTracks      = [];
+let hiddenTrackIds    = [];
+let currentTrackIndex = 0;
+let isPlaying         = false;
+let isShuffle         = false;
+let isRepeat          = false;
+let currentFilter     = 'all';
+let currentFolderFilter = 'all';
+let currentSessionPreset = null;
+let theme             = 'rain';
+let isLightMode       = false;
+let ambientVisualIntensity = 1;
+let activeAccentRgb   = '56, 189, 248';
+let waveOffset        = 0;
+let visualizerAnimId  = null;
+let progressPollInterval = null;
+let cozyToastTimer    = null;
+let activeLyricTimestamps = [];
+let html5TimeUnchangedCount = 0;
+let lastHtml5Time     = 0;
+let cozyDB            = null;
+let isYtReady         = false;
+let ytPlayer          = null;
+
+// --- Player Element Aliases (populated in DOMContentLoaded) ---
+let elPlayerTrackTitle  = null;
+let elPlayerTrackAlbum  = null;
+let elPlayerTrackYear   = null;
+let elPlayerTrackGenre  = null;
+let elPlayerTrackCover  = null;
+let elLocalFileInput    = null;
+let elImportBtnTrigger  = null;
+let elLocalImportZone   = null;
+
 // Helper: Extract ID3 tags using jsmediatags
 function extractMetadata(file) {
   return new Promise((resolve) => {
@@ -477,6 +519,9 @@ function updatePlayerUIPlaying(playing) {
     if (playing) elTonearm.classList.add('active');
     else elTonearm.classList.remove('active');
   }
+  document.body.classList.toggle('music-playing', playing);
+  if (playing) spawnHeartParticles();
+  else clearInterval(heartSpawnInterval);
 }
 // --- Helper: Decode audio file duration via AudioContext ---
 function getDurationFromAudioFile(file) {
@@ -935,6 +980,56 @@ function triggerFloatingNotes() {
   }, 2500);
 }
 
+// Always using HTML5 audio engine (YouTube removed)
+function isHtml5AudioEngine() { return true; }
+
+// Returns formatted duration string for the library list
+function getActiveDurationLabel(track) {
+  if (track && track.trackDuration && track.trackDuration > 0) {
+    return formatTime(track.trackDuration);
+  }
+  return '';
+}
+
+// Refreshes folder <select> dropdowns from the current customTracks list
+function updateFolderDropdowns() {
+  const folders = [...new Set((customTracks || []).map(t => t.folder || 'Uncategorized'))];
+  ['folder-filter'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    const cur = el.value;
+    el.innerHTML = '<option value="all">All Folders</option>';
+    folders.forEach(f => {
+      const opt = document.createElement('option');
+      opt.value = f; opt.textContent = f;
+      if (f === cur) opt.selected = true;
+      el.appendChild(opt);
+    });
+  });
+}
+
+// Spawns floating heart particles into the #floating-hearts container
+let heartSpawnInterval = null;
+function spawnHeartParticles() {
+  clearInterval(heartSpawnInterval);
+  const container = document.getElementById('floating-hearts');
+  if (!container) return;
+  const hearts = ['💗','💕','🌸','💖','❤️','💓','🩷'];
+  heartSpawnInterval = setInterval(() => {
+    if (!isPlaying) { clearInterval(heartSpawnInterval); return; }
+    if (container.children.length > 18) return;
+    const el = document.createElement('span');
+    el.className = 'heart-particle';
+    el.textContent = hearts[Math.floor(Math.random() * hearts.length)];
+    el.style.left = (5 + Math.random() * 90) + 'vw';
+    const dur = 7 + Math.random() * 6;
+    el.style.animationDuration = dur + 's';
+    el.style.fontSize = (0.7 + Math.random() * 0.9) + 'rem';
+    container.appendChild(el);
+    setTimeout(() => { if (el.parentNode) el.parentNode.removeChild(el); }, dur * 1000 + 300);
+  }, 1400);
+}
+
 // Fetches songs.json and populates LOCAL_FILE_NAMES before the player initializes
 async function loadSongsJSON() {
   try {
@@ -988,11 +1083,23 @@ document.addEventListener('DOMContentLoaded', () => {
     elCozyToast = document.getElementById('cozy-toast');
     elAmbientMasterBtn = document.getElementById('ambient-master-btn');
     elMainAudio = document.getElementById('main-audio');
-    
+
+    // Player element aliases — must match IDs used by loadTrack()
+    elPlayerTrackTitle = document.getElementById('player-track-title');
+    elPlayerTrackAlbum = document.getElementById('player-track-album');
+    elPlayerTrackYear  = document.getElementById('player-track-year');
+    elPlayerTrackGenre = document.getElementById('player-track-genre');
+    elPlayerTrackCover = document.querySelector('.player-blur-cover');
+
     // Engine selector caching
-    elLocalFileInput = document.getElementById('local-file-input');
-    elImportBtnTrigger = document.getElementById('import-btn-trigger');
-    elLocalImportZone = document.getElementById('local-import-zone');
+    elLocalFileInput    = document.getElementById('local-file-input');
+    elImportBtnTrigger  = document.getElementById('import-btn-trigger');
+    elLocalImportZone   = document.getElementById('local-import-zone');
+
+    // Restore persisted theme & light-mode
+    isLightMode = localStorage.getItem('jeff_bernat_light_mode') === 'true';
+    const _savedTheme = localStorage.getItem(STORAGE_KEY_THEME);
+    if (_savedTheme) { theme = _savedTheme; document.body.className = document.body.className.replace(/theme-\w+/,'') || ''; document.body.classList.add('theme-' + theme); }
 
     // --- Initialize Cozy Music Manager Dashboard & Catalog ---
     loadSongsJSON().then(() => {
