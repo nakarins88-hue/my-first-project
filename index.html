@@ -183,6 +183,14 @@
                 <i class="fa-solid fa-sliders"></i> <span>จัดการ</span>
               </button>
             </div>
+            
+            <!-- Folder Filter -->
+            <div class="folder-filter-container" style="margin-top: 10px;">
+              <select id="folder-filter" class="db-input" style="width: 100%; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2);">
+                <option value="all">📁 ทุกโฟลเดอร์</option>
+                <option value="Uncategorized">📁 Uncategorized</option>
+              </select>
+            </div>
           </div>
           
           <!-- Drag-and-drop Local File Importer Zone -->
@@ -249,19 +257,6 @@
             <div class="track-badge-container">
               <span id="player-track-year" class="track-badge">Year</span>
               <span id="player-track-genre" class="track-badge">R&B/Soul</span>
-            </div>
-            
-            <!-- Dynamic Audio Engine Selector Widget -->
-            <div class="engine-selector">
-              <button class="engine-pill active" id="engine-btn-local" title="เล่นไฟล์เพลงเต็มความคมชัดสูงที่จัดเตรียมไว้ในเครื่อง">
-                <i class="fa-solid fa-file-audio"></i> <span>Local File (เพลงเต็ม)</span>
-              </button>
-              <button class="engine-pill" id="engine-btn-youtube" title="สตรีมเพลงเต็มจาก YouTube Background">
-                <i class="fa-brands fa-youtube"></i> <span>YouTube Player</span>
-              </button>
-              <button class="engine-pill" id="engine-btn-itunes" title="เล่นตัวอย่างเพลง 30 วินาทีจาก Apple Music CDN">
-                <i class="fa-brands fa-apple"></i> <span>iTunes 30s</span>
-              </button>
             </div>
           </div>
 
@@ -341,8 +336,8 @@
     <!-- Album Shelf Carousel Widget -->
     <footer class="lounge-footer">
       <div class="shelf-header">
-        <h2 class="widget-title"><i class="fa-solid fa-compact-disc"></i> Jeff Bernat Discography</h2>
-        <span class="shelf-desc">ค้นพบเพลงทั้งหมดจาก iTunes Store</span>
+        <h2 class="widget-title"><i class="fa-solid fa-compact-disc"></i> My Albums</h2>
+        <span class="shelf-desc">อัลบั้มเพลงทั้งหมดของคุณ</span>
       </div>
       <div class="album-shelf-container custom-scrollbar">
         <div class="album-shelf" id="album-shelf">
@@ -432,28 +427,20 @@
                 <label for="track-album">ชื่ออัลบั้ม (Album) *</label>
                 <input type="text" id="track-album" placeholder="ตัวอย่าง: Custom Hits" required>
               </div>
+              
+              <div class="form-group">
+                <label for="track-folder"><i class="fa-solid fa-folder"></i> แฟ้มเพลง (Folder)</label>
+                <input type="text" id="track-folder" placeholder="เช่น เพลงไทย, ยุโรป" list="db-folder-list">
+                <datalist id="db-folder-list">
+                  <option value="Uncategorized">
+                </datalist>
+              </div>
             </div>
             
             <!-- Right form column -->
             <div class="form-col">
               <div class="form-group">
                 <label><i class="fa-solid fa-image"></i> ภาพปกอัลบั้ม (Cover Artwork)</label>
-                <!-- Cover Selection Options -->
-                <div class="cover-selection-options">
-                  <label class="cover-option">
-                    <input type="radio" name="cover-source" value="upload" checked>
-                    <span>อัพโหลดรูปปก</span>
-                  </label>
-                  <label class="cover-option">
-                    <input type="radio" name="cover-source" value="official">
-                    <span>ปกสำเร็จรูป</span>
-                  </label>
-                  <label class="cover-option">
-                    <input type="radio" name="cover-source" value="url">
-                    <span>ใช้ลิงก์รูปภาพ (URL)</span>
-                  </label>
-                </div>
-                
                 <!-- Artwork Dropzone (Upload option) -->
                 <div class="file-dropzone small" id="db-artwork-dropzone">
                   <input type="file" id="db-artwork-input" accept="image/*">
@@ -461,18 +448,6 @@
                   <span class="dropzone-text">อัพโหลดรูปภาพปก .jpg/.png</span>
                   <span class="file-name-display" id="db-artwork-filename">ยังไม่ได้เลือกไฟล์</span>
                 </div>
-                
-                <!-- Official Cover selector (Official option - hidden by default) -->
-                <div class="official-covers-grid" id="official-covers-grid" style="display: none;">
-                  <div class="off-cover-item active" data-cover="default_cover.png" style="background-image: url('default_cover.png')"></div>
-                  <div class="off-cover-item" data-cover="cover_renaissance.png" style="background-image: url('cover_renaissance.png')"></div>
-                  <div class="off-cover-item" data-cover="cover_meantime.png" style="background-image: url('cover_meantime.png')"></div>
-                  <div class="off-cover-item" data-cover="cover_shelovesmenot.png" style="background-image: url('cover_shelovesmenot.png')"></div>
-                  <div class="off-cover-item" data-cover="cover_singles.png" style="background-image: url('cover_singles.png')"></div>
-                </div>
-                
-                <!-- Artwork URL Input (URL option - hidden by default) -->
-                <input type="url" id="track-cover-url" class="db-input" placeholder="https://example.com/cover.jpg" style="display: none;">
               </div>
               
               <div class="form-row">
@@ -508,7 +483,6 @@
             
             <div class="catalog-tabs">
               <button type="button" class="catalog-tab active" data-filter="all">ทั้งหมด</button>
-              <button type="button" class="catalog-tab" data-filter="builtin">ในระบบ</button>
               <button type="button" class="catalog-tab" data-filter="custom">ที่อัพโหลดเอง</button>
               <button type="button" class="catalog-tab" data-filter="hidden">ที่ซ่อน/ลบไว้</button>
             </div>
@@ -566,6 +540,11 @@
           </div>
         </div>
         
+        <div class="form-group">
+          <label for="edit-track-folder"><i class="fa-solid fa-folder"></i> แฟ้มเพลง (Folder)</label>
+          <input type="text" id="edit-track-folder" class="db-input" list="db-folder-list">
+        </div>
+        
         <div class="form-actions">
           <button type="button" class="lounge-btn secondary-btn" id="close-edit-modal-btn-2" aria-label="ยกเลิกการแก้ไขข้อมูล">ยกเลิก</button>
           <button type="submit" class="lounge-btn primary-btn"><i class="fa-solid fa-check"></i> บันทึกข้อมูล</button>
@@ -577,11 +556,6 @@
   <!-- Audio Elements -->
   <audio id="main-audio"></audio>
   
-  <!-- Hidden YouTube Background Player for Full Songs (Standard visibility styles to prevent YouTube autoplay/audio block) -->
-  <div id="yt-player-container" style="position: fixed; bottom: 10px; right: 10px; width: 200px; height: 120px; z-index: -9999; opacity: 0.01; pointer-events: none; overflow: hidden;">
-    <div id="yt-player"></div>
-  </div>
-
   <!-- Main JavaScript File -->
   <script src="player-v8.js?v=17"></script>
   

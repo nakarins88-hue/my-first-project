@@ -2,462 +2,10 @@
    Cozy Jeff Bernat Music Lounge - Resilient Engine (Cache-Busted Player Edition)
    ========================================================================== */
 
-// --- 0. YouTube API Script Loader ---
-if (!document.querySelector('script[src*="youtube.com/iframe_api"]')) {
-  const tag = document.createElement('script');
-  tag.src = "https://www.youtube.com/iframe_api";
-  const firstScriptTag = document.getElementsByTagName('script')[0];
-  if (firstScriptTag) {
-    firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
-  } else {
-    document.head.appendChild(tag);
-  }
-  console.log("Dynamically injected YouTube Iframe API script.");
-}
-
 // --- 1. Global State Variables ---
-let ytPlayer = null;
-let isYtReady = false;
-let useFallbackAudio = false; // Automatically set to true if YouTube fails/is blocked
-let currentTrackIndex = 0;
-let isPlaying = false;
-let tracks = []; // Dynamically populated
-let allBaseTracks = []; // Original API/Built-in songs list
-let favorites = [];
-let cozyDB = null;
-let customTracks = [];
-let hiddenTrackIds = [];
-const STORAGE_KEY_HIDDEN = 'jeff_bernat_hidden_tracks';
-const STORAGE_KEY_THEME = 'jeff_bernat_mood_theme';
-const STORAGE_KEY_SESSION = 'jeff_bernat_session_preset';
-let isLightMode = localStorage.getItem('jeff_bernat_light_mode') === 'true';
-let currentFilter = 'all'; // 'all' | 'favorites'
-let isShuffle = false;
-let isRepeat = false;
-let theme = ['rain', 'cafe', 'study', 'sakura', 'candle'].includes(localStorage.getItem(STORAGE_KEY_THEME)) ? localStorage.getItem(STORAGE_KEY_THEME) : 'rain'; // 'rain' | 'cafe' | 'study' | 'sakura' | 'candle'
-let currentSessionPreset = localStorage.getItem(STORAGE_KEY_SESSION) || null;
-let ambientVisualIntensity = 1;
-let activeAccentRgb = '56, 189, 248'; // Cached active accent color to prevent layout thrashing in animation loop
-let progressPollInterval = null;
-let waveOffset = 0;
-let visualizerAnimId = null;
-let activeLyricTimestamps = [];
-let cozyToastTimer = null;
-let lastHtml5Time = 0;
-let html5TimeUnchangedCount = 0;
 
-// Audio Engine Caches & Settings
-let elEngineYoutube = null;
-let elEngineLocal = null;
-let elEngineItunes = null;
-let elLocalFileInput = null;
-let elImportBtnTrigger = null;
-let elLocalImportZone = null;
-let currentEngine = 'local'; // 'youtube' | 'local' | 'itunes'
 
-// Premium Local Library Listing
-const LOCAL_FILE_NAMES = [
-  "10,000 HOURS - PRETTYMUCH.m4a",
-  "11_11 - Good Love.m4a",
-  "((( 2 ))) - 07. IDGAF (freestyle).m4a",
-  "306 - HONNE.m4a",
-  "4EVER - Clairo.m4a",
-  "4EVERYTHING - Ace Hashimoto feat. Kero One.m4a",
-  "92914 - Okinawa.m4a",
-  "Abe Parker - Butterfiles.m4a",
-  "ADOY - Grace.m4a",
-  "ADOY - Wonder.m4a",
-  "Albert Posis - Serendipity.m4a",
-  "Alexander 23 - Crash.m4a",
-  "Alexander 23 - Hate Me If It Helps.m4a",
-  "Alexander 23 - IDK You Yet.m4a",
-  "Alexander 23 - The Hardest Part.m4a",
-  "All Out - Johnny Yukon.m4a",
-  "almost monday - she likes sports.m4a",
-  "Anson Seabra - Come Close.m4a",
-  "Ant Saunders - idontwannabealoneforChristmas.m4a",
-  "Ariana DeBose - This Wish.m4a",
-  "Ariana Grande - Almost Is Never Enough(Cover By Luizy).m4a",
-  "Arya - N95.m4a",
-  "As I Am - H.E.R..m4a",
-  "Astrid S - Hurts So Good (Maximillian & Kina Version).m4a",
-  "Baby Queen - Raw Thoughts.m4a",
-  "beabadoobee - Talk.m4a",
-  "BENEE - Supalonely ft. Gus Dapperton.m4a",
-  "BEST FRIEND - Rex Orange County.m4a",
-  "Be The One (inst).m4a",
-  "Be The One.m4a",
-  "Bet On Me - Walk off the Earth Ft. D Smoke.m4a",
-  "Better With You.m4a",
-  "Binibini (Last Day On Earth) - Zack Tabudlo ft. James TW.m4a",
-  "Birthday Suit.m4a",
-  "Blanks - Never Have I Ever.m4a",
-  "Bonjour (Intro).m4a",
-  "Boogie Down.m4a",
-  "Bored.m4a",
-  "BOYA - light me a cigarette.m4a",
-  "BoyWithUke ft. blackbear - IDGAF.m4a",
-  "Brahny - Bloom.m4a",
-  "brb. - saint.m4a",
-  "brb. - Undone.m4a",
-  "Bruno Major - Nothing.m4a",
-  "Call You Mine (feat. Geologic Of The Blue Scholars).m4a",
-  "Call You Mine (Sped Up).m4a",
-  "Casual (Acoustic).m4a",
-  "Casual (feat. Jeff Bernat & Johnny Stimson).m4a",
-  "Chamomile.m4a",
-  "Changes.m4a",
-  "Changes (Sped Up).m4a",
-  "Charlie Burg - I Don't Wanna Be Okay Without You.m4a",
-  "Charlotte Sands - Alright.m4a",
-  "Cheapest Flight - PREP.m4a",
-  "Chivalry Is dead - Trevor Wasley.m4a",
-  "Christian Kuria - Toroka.m4a",
-  "Chymes & Jack Newsome - F it ILY.m4a",
-  "Cian Ducrot - I'll Be Waiting.m4a",
-  "Clairo - Softly.m4a",
-  "clide - broken parts.m4a",
-  "Cody Fry - Things You Said ft. Abby Cates.m4a",
-  "Come On Over (inst.).m4a",
-  "Come On Over.m4a",
-  "Come Thru (Feat. Asher Roth).m4a",
-  "comethru - Jeremy Zucker.m4a",
-  "Conan Gray - Overdrive.m4a",
-  "Conan Gray - The Story.m4a",
-  "Cool Girls.m4a",
-  "Cruel.m4a",
-  "Cruel (Sped Up).m4a",
-  "d4vd - Sleep Well.m4a",
-  "d4vd - WORTHLESS.m4a",
-  "DallasK - Try Again ft. Lauv.m4a",
-  "Dameer দামীর - Michelle.m4a",
-  "Damn Mountains - Brandt Orange.m4a",
-  "Dane Amar - Green Tea & Honey feat. Jereena Montemayor.m4a",
-  "Daniel Caesar, Brandy - LOVE AGAIN.m4a",
-  "DA RA DA.m4a",
-  "Daughter - Be On Your Way.m4a",
-  "David Kushner - Daylight.m4a",
-  "Daydream.m4a",
-  "Declan J Donovan - Before You Let Me Go.m4a",
-  "Declan J Donovan - Perfectly Imperfect.m4a",
-  "Dept(뎁트) - Moonlight(Feat. Sonny Zero, 오넷(OoOo)).m4a",
-  "Dept(뎁트) - Perfect day(Feat.Ashley Alisha, nobody likes you pat).m4a",
-  "Distant Lover.m4a",
-  "Doesn't Matter.m4a",
-  "Dolly Ave - So Called Friend.m4a",
-  "Dominic Chin - Better.m4a",
-  "Dream Team.m4a",
-  "DRE'ES - WARM (ft. MIA).m4a",
-  "Easily - Bruno Major.m4a",
-  "EASY - Mac Ayres.m4a",
-  "Edwin Raphael - Have You Been Told？.m4a",
-  "Eldon - Pink cheeks.m4a",
-  "Elton John, Dua Lipa - Cold Heart.m4a",
-  "Em Beihold - Numb Little Bug.m4a",
-  "Emotional Oranges - West Coast Love.m4a",
-  "Eric Nam - Lost On Me.m4a",
-  "Everytime - boy pablo.m4a",
-  "Eyelar - Say It With Your Eyes.m4a",
-  "Faime - Feels Like You.m4a",
-  "Feels So Good - HONNE (ft. Anne Of the North).m4a",
-  "Fiji Blue - Feel Something.m4a",
-  "Finding Hope - 4005.m4a",
-  "Finn Askew CHERRY BOMB 🍒🍒🍒🍒.m4a",
-  "Finn Askew - Roses.m4a",
-  "FINNEAS - A Concert Six Months From Now.m4a",
-  "First Class.m4a",
-  "Flaming Hot Cheetos - Clairo.m4a",
-  "Flu - Is This The Love That I Need？.m4a",
-  "FOND.m4a",
-  "Forrest Nolan - miss misery.m4a",
-  "Fujii Kaze - Feelin’ Go(o)d.m4a",
-  "Gabe Watkins - Flowers From Japan.m4a",
-  "Gabe Watkins - Sunsets.m4a",
-  "Gabe Watkins - the rush.m4a",
-  "Gang Gang Schiele - 혁오 (HYUKOH).m4a",
-  "Gareth. T - November Rain.m4a",
-  "GAVIN. D - THE SIMPLE THINGS YOU DO.m4a",
-  "Gavin Haley - Body Language.m4a",
-  "Gavin Haley - Cliche.m4a",
-  "Gavin Haley - Mine.m4a",
-  "Gavin Haley - The Way I Am feat. Ella Vos.m4a",
-  "GET YOU - Daniel Caesar.m4a",
-  "G Flip - Queen feat. mxmtoon.m4a",
-  "Girl At The Coffee Shop.m4a",
-  "Glass Animals - Heat Waves.m4a",
-  "Golden(골든) - Hate Everything.m4a",
-  "Gold - Finding Hope.m4a",
-  "Good Together - HONNE.m4a",
-  "GRACEY, Ruel - Empty Love.m4a",
-  "Gracie Abrams - Feels Like.m4a",
-  "Gracie Abrams - I miss you, I'm sorry.m4a",
-  "grentperez - Cherry Wine.m4a",
-  "grentperez - Ego.m4a",
-  "Groovin'.m4a",
-  "Growing Old With You (Intimate).m4a",
-  "Halsey - I am not a woman, I'm a god.m4a",
-  "Halsey - So Good.m4a",
-  "Have Yourself a Merry Little Christmas.m4a",
-  "Hayd - Head In The Clouds.m4a",
-  "Healthy - PRETTYMUCH.m4a",
-  "Heaven Sent.m4a",
-  "Her's - Cool With You.m4a",
-  "Higher.m4a",
-  "HOAX - drew.m4a",
-  "hojean - far from here.m4a",
-  "Honesty - Pink Sweat$.m4a",
-  "HRVY - Runaway With It.m4a",
-  "Hypnotized (Feat. Blu).m4a",
-  "I Feel It Too - The Acadamic.m4a",
-  "If It Hadn't Been For You (Feat. Substantial).m4a",
-  "If You Wonder.m4a",
-  "I hope to be around - Men I Trust.m4a",
-  "I LOVE YOU SO - The Walters.m4a",
-  "imase - NIGHT DANCER.m4a",
-  "I Might - HONNE.m4a",
-  "In the Mood.m4a",
-  "Intro.m4a",
-  "Isaac hong X sooyoung chin 'everland'.m4a",
-  "It's Not Living(If It’s Not With You) - The1975.m4a",
-  "Ivoris - Honeysea.m4a",
-  "Jades Goudreault - Keep Dancing.m4a",
-  "Jae Jin - Gonna Be Honest.m4a",
-  "Janet - berhana.m4a",
-  "JAWNY - Honeypie.m4a",
-  "JDS(Fantasy) - Finding Hope.m4a",
-  "Jeff Bernat - Make Up Your Mind.m4a",
-  "Jeff Lewis - Mid City Love.m4a",
-  "Jeremy Zucker - 18.m4a",
-  "Jeremy Zucker - All the kids are depressed.m4a",
-  "Jeremy Zucker - always, I'll care.m4a",
-  "Jeremy Zucker, BENEE - i'm so happy.m4a",
-  "Jeremy Zucker & Chelsea Cutler - emily.m4a",
-  "Jeremy Zucker & Chelsea Cutler - This is how you fall in love.m4a",
-  "Jeremy Zucker - Sociopath (ft. keshi).m4a",
-  "Jeremy Zucker - supercuts.m4a",
-  "JERZY - HEY GIRL.m4a",
-  "Jimmy Brown - Let Me Know.m4a",
-  "joan - brokenhearted (together).m4a",
-  "joan - nervous.m4a",
-  "Johnny Stimson - Flower.m4a",
-  "Jordan Susanto - Senopati In The Rain.m4a",
-  "Justin Bieber - Honest (feat. Don Toliver).m4a",
-  "Justin Bieber - Peaches ft. Daniel Caesar, Giveon.m4a",
-  "Just Juice - “Loving Me”.m4a",
-  "Just Like The Movies - Kristian Lloyd (Audio Only).m4a",
-  "Just Vibe.m4a",
-  "JVKE - golden hour.m4a",
-  "KAIRO - Can You Love Me Tonight？.m4a",
-  "Kamal. - essential.m4a",
-  "Katherine Li - Never Had a Chance.m4a",
-  "Kaz INTERSECTION - To You (feat. Carlo Redl) By INTERSECTION.m4a",
-  "keshi - always.m4a",
-  "keshi - drunk.m4a",
-  "keshi - less of you.m4a",
-  "keshi - like i need u.m4a",
-  "keshi - LIMBO.m4a",
-  "keshi - Say.m4a",
-  "keshi - Soft Spot.m4a",
-  "KESHI - WAR WITH HEAVEN.m4a",
-  "khai dreams - Good Advice.m4a",
-  "King Princess - 1950.m4a",
-  "LANY - Congrats.m4a",
-  "LANY - dancing in the kitchen.m4a",
-  "LANY - Good Guys.m4a",
-  "LANY - if this is the last time.m4a",
-  "LANY - you!.m4a",
-  "Lauren Spencer-Smith - Fingers Crossed.m4a",
-  "Lauv - 26.m4a",
-  "Lauv - All 4 Nothing (I'm So In Love).m4a",
-  "Lauv - Stranger.m4a",
-  "Lavish.m4a",
-  "Lewis Capaldi - Before You Go.m4a",
-  "Lewis Capaldi - Bruises.m4a",
-  "Lewis Capaldi - Someone You Loved.m4a",
-  "Like A Star - Corinne Bailey Rae (Cover By DEAN).m4a",
-  "Line By Line - PREP feat. Cory Wong & Paul Jackson jr.m4a",
-  "Lorde - Stoned at the Nail Salon.m4a",
-  "Losing You - boy pablo.m4a",
-  "lost spaces - 35.mm.m4a",
-  "Loving is easy - Rex Orange County(ft. Benny Sings).m4a",
-  "lullaboy - Shortcut To Heaven.m4a",
-  "lullaboy - van gogh.m4a",
-  "Luvn On U.m4a",
-  "Mae Muller - 'Gone (Rosé cover).m4a",
-  "Mae Stephens - If We Ever Broke Up.m4a",
-  "Make a Move.m4a",
-  "Make It Official (Accapella).m4a",
-  "Make It Official (feat. Crucial Star).m4a",
-  "Make It Official (inst.).m4a",
-  "Make up Your Mind.m4a",
-  "Malibu Nights - LANY.m4a",
-  "Malinen - Letter.m4a",
-  "Masego & Fkj - Tadow.m4a",
-  "Maximillian - I'm Not Me.m4a",
-  "Maximillian - Letters.m4a",
-  "MAX – IT’S YOU (feat. keshi).m4a",
-  "Metro Boomin, The Weeknd, 21 Savage - Creepin'.m4a",
-  "Miles in Between (Feat. Joyce Wrice).m4a",
-  "milkydre - quarantine blues.m4a",
-  "Mina Okabe - Every Second.m4a",
-  "Mind Vs Heart.m4a",
-  "MISO - blinded.m4a",
-  "Mk.gee - ＂I Know How You Get＂.m4a",
-  "MK xyz - Baddie.m4a",
-  "Moonlight Chemistry.m4a",
-  "Movie - Tom misch.m4a",
-  "mp.oxford - Just for the Night.m4a",
-  "Ms. Seductive.m4a",
-  "My Dear.m4a",
-  "Nalba & Chevy - I Can't Leave My Room (ft. Park Bird).m4a",
-  "NEIKED, Mae Muller, Polo G - Better Days.m4a",
-  "New Hope Club - Call Me a Quitter.m4a",
-  "New Hope Club, Danna Paola - Know Me Too Well.m4a",
-  "New Hope Club - Don't Go Wasting Time.m4a",
-  "New Hope Club - Girl Who Does Both.m4a",
-  "Niall Horan - Put A Little Love On Me.m4a",
-  "Nicky Youre, dazy - Sunroof.m4a",
-  "NIKI - Every Summertime.m4a",
-  "No Rome - Remember November ⧸Bitcrush＊Yr＊Life.m4a",
-  "Oh Wonder - 22 Break.m4a",
-  "Oh Wonder - Better Now.m4a",
-  "Oh Wonder - Hallelujah.m4a",
-  "Once Upon a Time.m4a",
-  "OneRepublic - Someday.m4a",
-  "OneRepublic - Wanted.m4a",
-  "OnlyM, Blahza - Perfect.m4a",
-  "On my way - Prettymuch.m4a",
-  "Oslo Ibrahim - Midnight Thoughts.m4a",
-  "Oslo Ibrahim - Midnight Thoughts (Official Music Video).m4a",
-  "Other Half.m4a",
-  "Paces.m4a",
-  "party favor - Billie Eilish.m4a",
-  "Paul Partohap - Baby feat. Kevin Lavitt (Lyric Video).m4a",
-  "Paul Partohap - Baby (Prod. by Kevin Lavitt).m4a",
-  "Paul Partohap - P.S. I LOVE YOU.m4a",
-  "Peach Tree Rascals - Change My Mind.m4a",
-  "Peach Tree Rascals - LEAVE ME.m4a",
-  "Peach Tree Rascals - Mariposa.m4a",
-  "Peter Cottontale - ＂Forever Always＂.m4a",
-  "pH-1 - TELÉFONO (feat. 김하온, Woodie Gochild, 박재범, 식케이) (prod. WOOGIE).m4a",
-  "Pillow Talk.m4a",
-  "Pink Sweat$ - Coke & Henny Pt. 2.m4a",
-  "Plastic Plastic - Butterflies.m4a",
-  "Plenty of Reasons.m4a",
-  "PNAU, Troye Sivan - You Know What I Need.m4a",
-  "Post Malone - Circles.m4a",
-  "Post Malone - Cooped Up ft. Roddy Ricch.m4a",
-  "Post Malone - Goodbyes (feat. Young Thug).m4a",
-  "Post Malone - I Like You (A Happier Song) ft. Doja Cat.m4a",
-  "PP KRIT - ลังเล [Official MV].m4a",
-  "PREP - ＂Back To You＂.m4a",
-  "PREP - ＂Getaway (feat. Phum Viphurit)＂.m4a",
-  "PREP - ＂On and On＂.m4a",
-  "PREP - Snake Oil feat. Reva Devito.m4a",
-  "PRETTYMUCH - Hello.m4a",
-  "PRETTYMUCH - Up to You ft. NCT DREAM.m4a",
-  "Purples n' Oranges - Moao.m4a",
-  "Queen.m4a",
-  "rainlord. x keshi - Call Me.m4a",
-  "Reassurance.m4a",
-  "Remember Me - UMI.m4a",
-  "Rex Orange County - Always.m4a",
-  "RINI - My Favourite Clothes.m4a",
-  "River Tiber - West ft.Daniel Caesar.m4a",
-  "Rocketman - Fool Me.m4a",
-  "Romance (Inst.).m4a",
-  "Romance.m4a",
-  "Run - LANY.m4a",
-  "Sabrina Carpenter - Nonsense (Sped Up Version).m4a",
-  "sad alex - dating myself.m4a",
-  "SAMMii - Why Say Why.m4a",
-  "Sam Smith - Love Me More.m4a",
-  "Sam Smith & Summer Walker - You Will Be Found.m4a",
-  "San Francisco Street - Sun Rai.m4a",
-  "Sarah Barrios - Mourn The Living.m4a",
-  "Sarah Barrios - Somebody I'm Proud Of.m4a",
-  "Shawn Mendes - Heartbeat.m4a",
-  "She Was Mine - AJ Rafael ft. Jesse Barrera (Cover By Sam Kim).m4a",
-  "Situations.m4a",
-  "slchld - don't waste your time.m4a",
-  "slchld - girls are innocent.m4a",
-  "slchld - she likes spring, I prefer winter.m4a",
-  "slchld - two faced.m4a",
-  "Slow Down - Mac Ayres.m4a",
-  "Slow Jam Hour (Interlude).m4a",
-  "Solita - PRETTYMUCH ft. Rich The Kid.m4a",
-  "someone will love you better (Zack Tabudlo Version).m4a",
-  "Sophia Alexa - Before I Go.m4a",
-  "Sophia Alexa - Going To California.m4a",
-  "Still.m4a",
-  "Still (Sped Up).m4a",
-  "St. Vincent - Broken Man.m4a",
-  "Summer Dresses.m4a",
-  "Summer On You - PRETTYMUCH.m4a",
-  "Sunday Moon (선데이문) - Somebody.m4a",
-  "SUNFLOWERS - Rex Orange County.m4a",
-  "Surfaces - Sunday Best.m4a",
-  "Sweet Nothing.m4a",
-  "Take Me - MISO.m4a",
-  "Taylor Swift - Mr. Perfectly Fine (Taylor’s Version) (From The Vault).m4a",
-  "The Christmas Song.m4a",
-  "The Devil's In The Details - Mac Ayres.m4a",
-  "The Marias - Over The Moon.m4a",
-  "The Walters - I Love You So.m4a",
-  "The Weeknd & Ariana Grande - Die For You (Remix).m4a",
-  "The Weeknd - Nothing Is Lost (You Give Me Strength).m4a",
-  "The Weeknd - Out of Time.m4a",
-  "This Time.m4a",
-  "This Time (Sped Up).m4a",
-  "Thru These Tears - LANY.m4a",
-  "Thundercat & Tame Impala - 'No More Lies'.m4a",
-  "Thundercat - 'Them Changes'.m4a",
-  "Troye Sivan - Angel Baby.m4a",
-  "Troye Sivan - Strawberries & Cigarretes from Love Simon.m4a",
-  "U Make Me Feel - Johny Balik.m4a",
-  "Unknown Artist - A1 [CREATURES004].m4a",
-  "Unknown Artist - LMBYF.m4a",
-  "Unknown Artist ‎– The Jasmine Isle (Javanese Gamelan Music) [Side B] ｜ Personal Vinyl Rip..m4a",
-  "Various Places.m4a",
-  "vaultboy - aftermath.m4a",
-  "vaultboy - i think i wanna text u.m4a",
-  "Violette Wautier - Brassac.m4a",
-  "Violette Wautier - I'd Do It Again.m4a",
-  "Wallows - Are You Bored Yet？ (feat. Clairo).m4a",
-  "Waste No Time.m4a",
-  "Wave To Earth(웨이브투어스) - surf..m4a",
-  "Weakness - Jeremy Zucker.m4a",
-  "Weird Genius, Violette Wautier - Future Ghost.m4a",
-  "West Coast Getaway (Feat. The Cool Kids).m4a",
-  "Whatever Goes.m4a",
-  "WHERE WERE YOU IN THE MORNING - Shawn Mendes.m4a",
-  "White Christmas.m4a",
-  "Who's Got You Singing Again - PREP.m4a",
-  "Why iii Love the Moon - Phony Ppl.m4a",
-  "Wish You Well.m4a",
-  "With Love (feat. Mosaek).m4a",
-  "WizTheMc - World Is Fucked.m4a",
-  "WOODZ (조승연) - Multiply.m4a",
-  "Workflow (Feat. Dumbfoundead).m4a",
-  "Worth the Wait.m4a",
-  "Wrong About Forever.m4a",
-  "Wrong About Forever (Sped Up).m4a",
-  "Wrong - Mac Ayres.m4a",
-  "X Lovers - Haunt You ft. Chloe moriondo.m4a",
-  "Yello - Far Hills Ave (ft. Cameron Eggers).m4a",
-  "YOANDRI - IT'LL BE OK.m4a",
-  "You Could Be (Interlude).m4a",
-  "YOU - Dynamite Dylan ft. Post Malone.m4a",
-  "Zachary Knowles - WRONG SIDE.m4a",
-  "Zack Tabudlo ft. Billkin - Give Me Your Forever.m4a",
-  "Zack Tabudlo - Pano.m4a",
-  "다운 (Dvwn) 'HOME.m4a",
-  "맥케이 (McKay) - Angel 2 Me (Duet. Jeff Bernat).m4a",
-  "샘김 (Sam Kim) - Love Me Like That (알고있지만, OST).m4a",
-  "椅子樂團The Chairs - Dreaming With You.m4a",
-  "橘子海 Orange Ocean 【有暖气You Nuan Chi】.m4a",
-  "落日飛車 Sunset Rollercoaster - My Jinji.m4a"
-];
+
 
 // Try-Catch parse favorites from LocalStorage safely
 try {
@@ -804,15 +352,7 @@ const YOUTUBE_IDS = {
   withlove: "oP3g5hR1oG8"
 };
 
-function getYouTubeVideoId(trackName) {
-  const clean = trackName.toLowerCase().replace(/[^a-z0-9]/g, '');
-  for (let key in YOUTUBE_IDS) {
-    if (clean.includes(key) || key.includes(clean)) {
-      return YOUTUBE_IDS[key];
-    }
-  }
-  return "82g0sF-5-lI"; // Standard fallback
-}
+
 
 // Synced Lyrics Presets
 const PRESET_LYRICS = {
@@ -969,43 +509,17 @@ function getLocalAudioUrl(trackName) {
   return null;
 }
 
-function updateEngineSelectorUI() {
-  const currentTrack = tracks[currentTrackIndex];
-  
-  if (elEngineYoutube) {
-    elEngineYoutube.classList.toggle('active', currentEngine === 'youtube');
-    if (!isYtReady) elEngineYoutube.classList.add('disabled');
-    else elEngineYoutube.classList.remove('disabled');
-  }
-  
-  if (elEngineLocal) {
-    const hasLocal = currentTrack && (currentTrack.localUrl || getLocalAudioUrl(currentTrack.trackName));
-    elEngineLocal.classList.toggle('active', currentEngine === 'local');
-    if (hasLocal) {
-      elEngineLocal.classList.remove('disabled');
-      elEngineLocal.querySelector('span').textContent = 'Local File (เพลงเต็ม)';
-    } else {
-      elEngineLocal.classList.add('disabled');
-      elEngineLocal.querySelector('span').textContent = 'Local File (ไม่มีไฟล์)';
-    }
-  }
-  
-  if (elEngineItunes) {
-    elEngineItunes.classList.toggle('active', currentEngine === 'itunes');
-  }
-}
 
-function isHtml5AudioEngine() {
-  return currentEngine === 'local' || currentEngine === 'itunes' || useFallbackAudio;
-}
+
+
 
 function getCorrectedDuration(audioElement, track) {
   if (!audioElement) return 30;
   let reportedDuration = audioElement.duration || 30;
   
-  // If reported duration is double (or significantly larger than) the actual duration
-  if (track && track.trackDuration && reportedDuration > 30) {
-    if (reportedDuration > track.trackDuration * 1.5) {
+  // If we have a mathematically precise trackDuration (from AudioContext or iTunes API)
+  if (track && track.trackDuration && track.trackDuration > 0 && reportedDuration > 30) {
+    if (Math.abs(reportedDuration - track.trackDuration) > 2) {
       return track.trackDuration;
     }
   }
@@ -1013,10 +527,7 @@ function getCorrectedDuration(audioElement, track) {
   return reportedDuration;
 }
 
-function getActiveDurationLabel(track) {
-  const hasFullTrack = !!(track && (track.localUrl || getLocalAudioUrl(track.trackName) || (isYtReady && !useFallbackAudio)));
-  return hasFullTrack ? 'Full' : '0:30';
-}
+
 
 function updatePlayerUIPlaying(playing) {
   if (elPlayBtn) elPlayBtn.innerHTML = playing ? '<i class="fa-solid fa-pause"></i>' : '<i class="fa-solid fa-play"></i>';
@@ -1028,6 +539,29 @@ function updatePlayerUIPlaying(playing) {
     if (playing) elTonearm.classList.add('active');
     else elTonearm.classList.remove('active');
   }
+}
+// --- Helper: Decode audio file duration via AudioContext ---
+function getDurationFromAudioFile(file) {
+  return new Promise((resolve) => {
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const arrayBuffer = e.target.result;
+        audioContext.decodeAudioData(arrayBuffer, (decodedAudio) => {
+          resolve(decodedAudio.duration);
+        }, (err) => {
+          console.warn("Failed to decode audio data, fallback to 0", err);
+          resolve(0);
+        });
+      };
+      reader.onerror = () => resolve(0);
+      reader.readAsArrayBuffer(file);
+    } catch (e) {
+      console.warn("AudioContext error", e);
+      resolve(0);
+    }
+  });
 }
 
 async function importLocalTracks(files) {
@@ -1070,6 +604,8 @@ async function importLocalTracks(files) {
       const newTrackId = 'custom_' + Date.now() + Math.round(Math.random() * 100);
       lastNewTrackId = newTrackId;
       
+      const duration = await getDurationFromAudioFile(file);
+      
       const customTrack = {
         trackId: newTrackId,
         trackName: nameWithoutExt,
@@ -1079,7 +615,9 @@ async function importLocalTracks(files) {
         releaseDate: new Date().toISOString(),
         primaryGenreName: "Local Audio",
         trackViewUrl: "#",
-        isCustom: true
+        isCustom: true,
+        folder: "Uncategorized",
+        trackDuration: duration > 0 ? duration : null
       };
       
       if (typeof saveCustomTrackToDB === 'function') {
@@ -1162,207 +700,79 @@ async function importLocalTracks(files) {
 }
 
 function loadTrack(index) {
-  if (index < 0 || index >= tracks.length) return;
+  if (tracks.length === 0) return;
+  if (index < 0) index = tracks.length - 1;
+  if (index >= tracks.length) index = 0;
   
   currentTrackIndex = index;
   const track = tracks[currentTrackIndex];
   
-  if (elTrackTitleMain) elTrackTitleMain.textContent = track.trackName;
-  if (elTrackAlbumMain) elTrackAlbumMain.textContent = track.collectionName;
+  // Set UI
+  if (elPlayerTrackTitle) elPlayerTrackTitle.textContent = track.trackName;
+  if (elPlayerTrackAlbum) elPlayerTrackAlbum.textContent = track.collectionName || 'Unknown Album';
+  if (elPlayerTrackYear) elPlayerTrackYear.textContent = track.releaseDate ? new Date(track.releaseDate).getFullYear() : '2026';
+  if (elPlayerTrackGenre) elPlayerTrackGenre.textContent = track.primaryGenreName || 'Local Audio';
   
-  const year = track.releaseDate ? new Date(track.releaseDate).getFullYear() : 'Unknown';
-  if (elTrackYear) elTrackYear.textContent = year;
-  if (elTrackGenre) elTrackGenre.textContent = track.primaryGenreName || 'R&B/Soul';
-  
-  const localCover = getLocalCoverUrl(track.trackName, track.collectionName);
-  if (elVinylLabel) elVinylLabel.style.backgroundImage = `url('${track.artworkUrl100}'), url('${localCover}')`;
-  
-  if (elCurrentTimeDisplay) elCurrentTimeDisplay.textContent = "0:00";
-  
-  // Set default local url if present in directory and not already a custom blob URL
-  if (!track.localUrl || !track.localUrl.startsWith('blob:')) {
-    const localUrl = getLocalAudioUrl(track.trackName);
-    if (localUrl) {
-      track.localUrl = localUrl;
-    }
+  if (elPlayerTrackCover) {
+    elPlayerTrackCover.style.backgroundImage = `url('${track.artworkUrl100}'), url('${getLocalCoverUrl(track.trackName, track.collectionName)}')`;
   }
   
-  // Select best audio engine available
-  if (track.localUrl) {
-    currentEngine = 'local';
-  } else if (isYtReady && !useFallbackAudio) {
-    currentEngine = 'youtube';
-  } else {
-    currentEngine = 'itunes';
+  // Update Background Blur Cover
+  const blurCover = document.querySelector('.player-blur-cover');
+  if (blurCover) {
+    blurCover.style.backgroundImage = `url('${track.artworkUrl100}'), url('${getLocalCoverUrl(track.trackName, track.collectionName)}')`;
   }
   
-  if (elTotalDurationDisplay) {
-    if (currentEngine === 'local') {
-      elTotalDurationDisplay.textContent = "Loading...";
-    } else if (currentEngine === 'itunes') {
-      elTotalDurationDisplay.textContent = "0:30";
-    } else {
-      elTotalDurationDisplay.textContent = "Loading...";
-    }
-  }
+  // Update media session
+  updateMediaSessionMetadata(track);
   
+  // Reset Progress
   if (elProgressFill) elProgressFill.style.width = "0%";
-  if (elItunesLink) elItunesLink.href = track.trackViewUrl;
+  if (elCurrentTimeDisplay) elCurrentTimeDisplay.textContent = "0:00";
+  if (elTotalDurationDisplay) elTotalDurationDisplay.textContent = "Loading...";
   
-  // Heart favoriting
-  const isFav = favorites.includes(track.trackId);
-  if (elHeartCurrentBtn) {
-    if (isFav) {
-      elHeartCurrentBtn.className = 'sub-btn active';
-      elHeartCurrentBtn.innerHTML = '<i class="fa-solid fa-heart"></i>';
-    } else {
-      elHeartCurrentBtn.className = 'sub-btn';
-      elHeartCurrentBtn.innerHTML = '<i class="fa-regular fa-heart"></i>';
-    }
+  // Load local HTML5 audio directly
+  if (elMainAudio) {
+    elMainAudio.src = track.localUrl;
+    elMainAudio.load();
+    elMainAudio.oncanplay = () => {
+      const displayDuration = getCorrectedDuration(elMainAudio, track);
+      if (elTotalDurationDisplay) elTotalDurationDisplay.textContent = formatTime(displayDuration);
+    };
   }
   
+  renderLibrary();
   loadLyrics(track.trackName);
-  updateEngineSelectorUI();
   
-  // Update lock screen media session details
-  if (typeof updateMediaSessionMetadata === 'function') {
-    updateMediaSessionMetadata(track);
-  }
-  
-  // Update UI list items
-  if (elLibraryList) {
-    const songItems = elLibraryList.querySelectorAll('.song-item');
-    songItems.forEach((item, idx) => {
-      if (idx === index) {
-        item.classList.add('active');
-        const cover = item.querySelector('.song-item-cover');
-        if (cover && isPlaying) cover.innerHTML = '<i class="fa-solid fa-volume-high text-accent"></i>';
-      } else {
-        item.classList.remove('active');
-        const cover = item.querySelector('.song-item-cover');
-        if (cover) cover.innerHTML = '';
-      }
-    });
-  }
-
-  // Pre-load track sources
-  if (currentEngine === 'local' && track.localUrl) {
-    if (elMainAudio) {
-      elMainAudio.src = track.localUrl;
-      elMainAudio.load();
-    }
-  } else if (currentEngine === 'itunes') {
-    if (elMainAudio) {
-      elMainAudio.src = track.previewUrl;
-      elMainAudio.load();
-    }
-  } else if (currentEngine === 'youtube' && isYtReady && ytPlayer) {
-    const ytId = getYouTubeVideoId(track.trackName);
-    ytPlayer.cueVideoById(ytId);
-    ytPlayer.unMute();
-  }
+  // Update active accent color based on cover art (simulated)
+  const colors = ['56, 189, 248', '244, 114, 182', '167, 139, 250', '251, 146, 60', '52, 211, 153'];
+  activeAccentRgb = colors[index % colors.length];
+  document.documentElement.style.setProperty('--accent-glow', activeAccentRgb);
 }
 
 function playAudio() {
-  const currentTrack = tracks[currentTrackIndex];
+  if (tracks.length === 0) return;
+  isPlaying = true;
+  updatePlayerUIPlaying(true);
   
-  // Pause any conflicting audio elements first
-  if (elMainAudio) elMainAudio.pause();
-  if (isYtReady && ytPlayer) ytPlayer.pauseVideo();
-  
-  if (currentEngine === 'local' && (currentTrack.localUrl || getLocalAudioUrl(currentTrack.trackName))) {
-    const activeUrl = currentTrack.localUrl || getLocalAudioUrl(currentTrack.trackName);
-    console.log("Playing via Local High-Quality Audio Engine:", activeUrl);
-    
-    if (elMainAudio) {
-      const absActiveUrl = new URL(activeUrl, window.location.href).href;
-      if (elMainAudio.src !== absActiveUrl && !elMainAudio.src.startsWith('blob:')) {
-        elMainAudio.src = activeUrl;
-        elMainAudio.load();
-      }
-      
-      isPlaying = true;
-      elMainAudio.play().then(() => {
-        updatePlayerUIPlaying(true);
-        triggerFloatingNotes();
-        startProgressPolling();
-        if (typeof updateMediaSessionMetadata === 'function') {
-          updateMediaSessionMetadata(currentTrack);
-        }
-      }).catch(e => {
-        console.warn("Local audio playback failed, falling back to iTunes/YouTube:", e);
-        // Autoplay policies or other failures fallback
-        currentEngine = 'youtube';
-        updateEngineSelectorUI();
-        playAudio();
-      });
-    }
-  } else if (currentEngine === 'youtube' && isYtReady && ytPlayer && !useFallbackAudio) {
-    console.log("Playing via YouTube Background Engine.");
-    isPlaying = true;
-    const ytId = getYouTubeVideoId(currentTrack.trackName);
-    const currentVideoUrl = ytPlayer.getVideoUrl();
-    
-    if (currentVideoUrl && currentVideoUrl.includes(ytId)) {
-      ytPlayer.playVideo();
-    } else {
-      ytPlayer.loadVideoById(ytId);
-    }
-    
-    ytPlayer.unMute();
-    updatePlayerUIPlaying(true);
-    triggerFloatingNotes();
-    startProgressPolling();
-    if (typeof updateMediaSessionMetadata === 'function') {
-      updateMediaSessionMetadata(currentTrack);
-    }
-  } else {
-    console.log("Playing via HTML5 Audio Fallback Engine.");
-    currentEngine = 'itunes';
-    updateEngineSelectorUI();
-    
-    if (elMainAudio) {
-      const targetSrc = currentTrack.previewUrl;
-      if (elMainAudio.src !== targetSrc) {
-        elMainAudio.src = targetSrc;
-        elMainAudio.load();
-      }
-      
-      isPlaying = true;
-      elMainAudio.play().then(() => {
-        updatePlayerUIPlaying(true);
-        triggerFloatingNotes();
-        startProgressPolling();
-        if (typeof updateMediaSessionMetadata === 'function') {
-          updateMediaSessionMetadata(currentTrack);
-        }
-      }).catch(e => {
-        console.error("HTML5 Audio fallback failed to play:", e);
-      });
-    }
+  if (elMainAudio) {
+    elMainAudio.play().catch(e => {
+      console.warn("Auto-play prevented by browser:", e);
+      isPlaying = false;
+      updatePlayerUIPlaying(false);
+    });
   }
-
-  // Update native lock screen state
-  if ('mediaSession' in navigator) {
-    navigator.mediaSession.playbackState = 'playing';
-  }
+  startProgressPolling();
 }
 
 function pauseAudio() {
   isPlaying = false;
   updatePlayerUIPlaying(false);
-  stopProgressPolling();
   
-  if (currentEngine === 'youtube') {
-    if (isYtReady && ytPlayer) ytPlayer.pauseVideo();
-  } else {
-    if (elMainAudio) elMainAudio.pause();
+  if (elMainAudio) {
+    elMainAudio.pause();
   }
-
-  // Update native lock screen state
-  if ('mediaSession' in navigator) {
-    navigator.mediaSession.playbackState = 'paused';
-  }
+  stopProgressPolling();
 }
 
 function nextTrack(forcePlay = false) {
@@ -1401,24 +811,17 @@ function startProgressPolling() {
     let duration = 0;
     const currentTrack = tracks[currentTrackIndex];
     
-    if (isHtml5AudioEngine()) {
-      if (elMainAudio) {
-        currentTime = elMainAudio.currentTime;
-        duration = getCorrectedDuration(elMainAudio, currentTrack);
-        
-        // Handle double-duration bug manual advance in polling too
-        if (currentTrack && currentTrack.trackDuration && elMainAudio.duration > currentTrack.trackDuration * 1.5) {
-          if (currentTime >= currentTrack.trackDuration - 0.5) {
-            console.log("Accurate duration limit reached (polling), advancing track.");
-            nextTrack(true);
-            return;
-          }
+    if (elMainAudio) {
+      currentTime = elMainAudio.currentTime;
+      duration = getCorrectedDuration(elMainAudio, currentTrack);
+      
+      // Handle double-duration bug manual advance in polling too
+      if (currentTrack && currentTrack.trackDuration && elMainAudio.duration > currentTrack.trackDuration * 1.5) {
+        if (currentTime >= currentTrack.trackDuration - 0.5) {
+          console.log("Accurate duration limit reached (polling), advancing track.");
+          nextTrack(true);
+          return;
         }
-      }
-    } else {
-      if (isYtReady && ytPlayer && isPlaying) {
-        currentTime = ytPlayer.getCurrentTime();
-        duration = ytPlayer.getDuration();
       }
     }
     
@@ -1447,25 +850,13 @@ function setProgress(e) {
   const clickX = e.offsetX;
   const currentTrack = tracks[currentTrackIndex];
   
-  if (isHtml5AudioEngine()) {
-    if (elMainAudio) {
-      const duration = getCorrectedDuration(elMainAudio, currentTrack);
-      if (duration > 0) {
-        const newTime = (clickX / width) * duration;
-        elMainAudio.currentTime = newTime;
-        if (elCurrentTimeDisplay) elCurrentTimeDisplay.textContent = formatTime(newTime);
-        if (elProgressFill) elProgressFill.style.width = `${(clickX / width) * 100}%`;
-      }
-    }
-  } else {
-    if (isYtReady && ytPlayer) {
-      const duration = ytPlayer.getDuration();
-      if (duration > 0) {
-        const newTime = (clickX / width) * duration;
-        ytPlayer.seekTo(newTime, true);
-        if (elCurrentTimeDisplay) elCurrentTimeDisplay.textContent = formatTime(newTime);
-        if (elProgressFill) elProgressFill.style.width = `${(clickX / width) * 100}%`;
-      }
+  if (elMainAudio) {
+    const duration = getCorrectedDuration(elMainAudio, currentTrack);
+    if (duration > 0) {
+      const newTime = (clickX / width) * duration;
+      elMainAudio.currentTime = newTime;
+      if (elCurrentTimeDisplay) elCurrentTimeDisplay.textContent = formatTime(newTime);
+      if (elProgressFill) elProgressFill.style.width = `${(clickX / width) * 100}%`;
     }
   }
 }
@@ -1720,7 +1111,7 @@ function setupDOMEventListeners() {
   if (elMainAudio) {
     elMainAudio.addEventListener('loadedmetadata', () => {
       console.log("Audio metadata loaded. Duration:", elMainAudio.duration);
-      if ((currentEngine === 'local' || currentEngine === 'itunes') && elMainAudio.duration) {
+      if (elMainAudio.duration) {
         if (elTotalDurationDisplay) {
           const currentTrack = tracks[currentTrackIndex];
           const displayDuration = getCorrectedDuration(elMainAudio, currentTrack);
@@ -1731,7 +1122,7 @@ function setupDOMEventListeners() {
 
     elMainAudio.addEventListener('durationchange', () => {
       console.log("Audio duration change. Duration:", elMainAudio.duration);
-      if ((currentEngine === 'local' || currentEngine === 'itunes') && elMainAudio.duration) {
+      if (elMainAudio.duration) {
         if (elTotalDurationDisplay) {
           const currentTrack = tracks[currentTrackIndex];
           const displayDuration = getCorrectedDuration(elMainAudio, currentTrack);
@@ -1741,48 +1132,46 @@ function setupDOMEventListeners() {
     });
 
     elMainAudio.addEventListener('timeupdate', () => {
-      if (currentEngine === 'local' || currentEngine === 'itunes') {
-        const currentTrack = tracks[currentTrackIndex];
-        const currentTime = elMainAudio.currentTime;
-        let duration = getCorrectedDuration(elMainAudio, currentTrack);
-        
-        // Handle double-duration bug manual advance if we have accurate track duration
-        if (currentTrack && currentTrack.trackDuration && elMainAudio.duration > currentTrack.trackDuration * 1.5) {
-          if (currentTime >= currentTrack.trackDuration - 0.5) {
-            console.log("Accurate duration limit reached, advancing track.");
-            nextTrack(true);
-            return;
-          }
+      const currentTrack = tracks[currentTrackIndex];
+      const currentTime = elMainAudio.currentTime;
+      let duration = getCorrectedDuration(elMainAudio, currentTrack);
+      
+      // Handle double-duration bug manual advance if we have accurate track duration
+      if (currentTrack && currentTrack.trackDuration && elMainAudio.duration > currentTrack.trackDuration * 1.5) {
+        if (currentTime >= currentTrack.trackDuration - 0.5) {
+          console.log("Accurate duration limit reached, advancing track.");
+          nextTrack(true);
+          return;
         }
-        
-        // Fallback: Automatic stuck playback detection for local tracks without iTunes metadata
-        if (elMainAudio.duration > 30 && !elMainAudio.paused && isPlaying && elMainAudio.readyState >= 3 && !elMainAudio.seeking) {
-          if (currentTime === lastHtml5Time) {
-            html5TimeUnchangedCount++;
-            if (html5TimeUnchangedCount >= 5) { // Unchanged for ~1.25s (timeupdate fires ~4 times/sec)
-              const ratio = currentTime / elMainAudio.duration;
-              if (ratio >= 0.45 && ratio <= 0.55) {
-                console.warn("Double-duration bug detected (stuck around 50%). Forcing next track.");
-                html5TimeUnchangedCount = 0;
-                nextTrack(true);
-                return;
-              }
+      }
+      
+      // Fallback: Automatic stuck playback detection for local tracks without iTunes metadata
+      if (elMainAudio.duration > 30 && !elMainAudio.paused && isPlaying && elMainAudio.readyState >= 3 && !elMainAudio.seeking) {
+        if (currentTime === lastHtml5Time) {
+          html5TimeUnchangedCount++;
+          if (html5TimeUnchangedCount >= 5) { // Unchanged for ~1.25s (timeupdate fires ~4 times/sec)
+            const ratio = currentTime / elMainAudio.duration;
+            if (ratio >= 0.45 && ratio <= 0.55) {
+              console.warn("Double-duration bug detected (stuck around 50%). Forcing next track.");
+              html5TimeUnchangedCount = 0;
+              nextTrack(true);
+              return;
             }
-          } else {
-            html5TimeUnchangedCount = 0;
-            lastHtml5Time = currentTime;
           }
+        } else {
+          html5TimeUnchangedCount = 0;
+          lastHtml5Time = currentTime;
         }
-        
-        if (duration > 0) {
-          const progressPercent = Math.min((currentTime / duration) * 100, 100);
-          if (elProgressFill) elProgressFill.style.width = `${progressPercent}%`;
-          if (elCurrentTimeDisplay) elCurrentTimeDisplay.textContent = formatTime(currentTime);
-          if (elTotalDurationDisplay) {
-            elTotalDurationDisplay.textContent = formatTime(duration);
-          }
-          syncLyricsHighlight(currentTime);
+      }
+      
+      if (duration > 0) {
+        const progressPercent = Math.min((currentTime / duration) * 100, 100);
+        if (elProgressFill) elProgressFill.style.width = `${progressPercent}%`;
+        if (elCurrentTimeDisplay) elCurrentTimeDisplay.textContent = formatTime(currentTime);
+        if (elTotalDurationDisplay) {
+          elTotalDurationDisplay.textContent = formatTime(duration);
         }
+        syncLyricsHighlight(currentTime);
       }
     });
 
@@ -1799,30 +1188,8 @@ function setupDOMEventListeners() {
 
     elMainAudio.addEventListener('error', (e) => {
       console.warn("HTML5 Audio error occurred:", e);
-      const currentTrack = tracks[currentTrackIndex];
-      if (currentEngine === 'local') {
-        // Local file failed (e.g., 404), try YouTube fallback
-        if (isYtReady && !useFallbackAudio) {
-          console.log("Local file unavailable, falling back to YouTube engine.");
-          currentEngine = 'youtube';
-          updateEngineSelectorUI();
-          if (isPlaying) playAudio();
-        } else if (currentTrack && currentTrack.previewUrl) {
-          // Fall back to iTunes preview
-          console.log("Local file unavailable, falling back to iTunes preview.");
-          currentEngine = 'itunes';
-          useFallbackAudio = true;
-          updateEngineSelectorUI();
-          if (isPlaying) playAudio();
-        } else {
-          showToast("Audio Error ⚠️", "ไม่สามารถเล่นเพลงนี้ได้ กำลังข้ามไปเพลงถัดไปค่ะ");
-          nextTrack(true);
-        }
-      } else {
-        // iTunes preview failed, skip to next
-        showToast("Audio Error ⚠️", "ไม่สามารถเล่นเพลงนี้ได้ กำลังข้ามไปเพลงถัดไปค่ะ");
-        nextTrack(true);
-      }
+      showToast("Audio Error ⚠️", "ไม่สามารถเล่นเพลงนี้ได้ กำลังข้ามไปเพลงถัดไปค่ะ");
+      nextTrack(true);
     });
   }
 
@@ -1880,6 +1247,13 @@ function setupDOMEventListeners() {
 
   if (elSongSearch) elSongSearch.addEventListener('input', renderLibrary);
   
+  const elFolderFilter = document.getElementById('folder-filter');
+  if (elFolderFilter) {
+    elFolderFilter.addEventListener('change', (e) => {
+      currentFolderFilter = e.target.value;
+      renderLibrary();
+    });
+  }
   if (elLibTabs) {
     elLibTabs.forEach(tab => {
       tab.addEventListener('click', () => {
@@ -2037,6 +1411,10 @@ function renderLibrary() {
     );
   }
   
+  if (currentFolderFilter !== 'all') {
+    filteredTracks = filteredTracks.filter(t => (t.folder || 'Uncategorized') === currentFolderFilter);
+  }
+  
   if (filteredTracks.length === 0) {
     elLibraryList.innerHTML = `
       <div class="empty-state">
@@ -2059,7 +1437,7 @@ function renderLibrary() {
       </div>
       <div class="song-item-details">
         <div class="song-item-title">${track.trackName}</div>
-        <div class="song-item-album">${track.collectionName}</div>
+        <div class="song-item-album">${track.collectionName} ${track.folder && track.folder !== 'Uncategorized' ? `• 📁 ${track.folder}` : ''}</div>
       </div>
       <div class="song-item-duration">${getActiveDurationLabel(track)}</div>
       <button class="song-item-heart ${isFavorite ? 'active' : ''}" data-id="${track.trackId}">
@@ -2124,152 +1502,7 @@ function renderAlbumShelf() {
 }
 
 // --- 15. Fetch Data from iTunes Store ---
-async function fetchSongsFromiTunes() {
-  try {
-    const response = await fetch('https://itunes.apple.com/search?term=jeff+bernat&limit=150&entity=song');
-    if (!response.ok) throw new Error('API fetch error');
-    
-    const data = await response.json();
-    if (data.results && data.results.length > 0) {
-      // Map iTunes tracks
-      const apiTracks = data.results.map(track => {
-        const localUrl = getLocalAudioUrl(track.trackName);
-        return {
-          trackId: track.trackId,
-          trackName: track.trackName,
-          collectionName: track.collectionName || "Single",
-          artworkUrl100: track.artworkUrl100 ? track.artworkUrl100.replace('100x100bb.jpg', '500x500bb.jpg') : 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?w=500',
-          previewUrl: track.previewUrl,
-          localUrl: localUrl,
-          releaseDate: track.releaseDate,
-          primaryGenreName: track.primaryGenreName || "R&B/Soul",
-          trackViewUrl: track.trackViewUrl || "https://music.apple.com/us/artist/jeff-bernat/487317660",
-          trackDuration: track.trackTimeMillis ? track.trackTimeMillis / 1000 : null
-        };
-      });
-      
-      // Filter out duplicate IDs and any mix/alternate versions
-      const uniqueIds = new Set();
-      let mergedTracks = apiTracks.filter(t => {
-        if (!t.trackName || uniqueIds.has(t.trackId)) return false;
-        
-        const clean = t.trackName.toLowerCase();
-        if (clean.includes('sped up') ||
-            clean.includes('acoustic') ||
-            clean.includes('inst.') ||
-            clean.includes('inst)') ||
-            clean.includes('instrumental') ||
-            clean.includes('intro') ||
-            clean.includes('interlude') ||
-            clean.includes('accapella') ||
-            clean.includes('remix') ||
-            clean.includes('mix')) {
-          return false;
-        }
-        
-        uniqueIds.add(t.trackId);
-        return true;
-      });
 
-      // Two-way merge: Find local files that didn't get matched in iTunes results (filtering out mixes)
-      const filteredLocalMerge = LOCAL_FILE_NAMES.filter(fileName => {
-        const clean = fileName.toLowerCase();
-        return !clean.includes('sped up') &&
-               !clean.includes('acoustic') &&
-               !clean.includes('inst.') &&
-               !clean.includes('inst)') &&
-               !clean.includes('instrumental') &&
-               !clean.includes('intro') &&
-               !clean.includes('interlude') &&
-               !clean.includes('accapella') &&
-               !clean.includes('remix') &&
-               !clean.includes('mix');
-      });
-
-      filteredLocalMerge.forEach((fileName, idx) => {
-        const nameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
-        const cleanFile = nameWithoutExt.toLowerCase().replace(/[^a-z0-9]/g, '');
-        
-        // Check if this file is already matched in mergedTracks
-        // Use STRICT match to avoid false positives (e.g. "Talk" matching "Pillow Talk")
-        const isMatched = mergedTracks.some(t => {
-          if (!t.trackName) return false;
-          const cleanTName = t.trackName.toLowerCase().replace(/[^a-z0-9]/g, '');
-          // Exact match
-          if (cleanFile === cleanTName) return true;
-          // Allow partial match only if names are very similar length
-          const shorter = cleanFile.length < cleanTName.length ? cleanFile : cleanTName;
-          const longer = cleanFile.length >= cleanTName.length ? cleanFile : cleanTName;
-          if (shorter.length < 4) return false; // Never match very short names
-          if (shorter.length / longer.length < 0.7) return false; // Too different in length
-          return longer.includes(shorter);
-        });
-        
-        if (!isMatched) {
-          // Detect multi-artist songs (from dall folder) vs Jeff Bernat originals
-          const isMultiArtist = nameWithoutExt.includes(" - ");
-          
-          let collection = "The Gentleman Approach";
-          let artwork = getLocalCoverUrl(nameWithoutExt, collection);
-          let year = "2012-12-07T08:00:00Z";
-          
-          if (isMultiArtist) {
-            collection = "Cozy Lounge Hits";
-            artwork = getLocalCoverUrl(nameWithoutExt, collection);
-            year = "2026-05-29T00:00:00Z";
-          } else if (cleanFile.includes("pillowtalk") || cleanFile.includes("coolgirls") || cleanFile.includes("modernrenaissance")) {
-            collection = "Modern Renaissance";
-            artwork = "cover_renaissance.png";
-            year = "2013-12-15T08:00:00Z";
-          } else if (cleanFile.includes("changes") || cleanFile.includes("shelovesmenot")) {
-            collection = "She Loves Me Not";
-            artwork = "cover_shelovesmenot.png";
-            year = "2019-05-10T08:00:00Z";
-          } else if (cleanFile.includes("still") || cleanFile.includes("cruisin") || cleanFile.includes("meantime")) {
-            collection = "In the Meantime";
-            artwork = "cover_meantime.png";
-            year = "2016-01-16T08:00:00Z";
-          }
-
-          const localTrack = {
-            trackId: 'local_' + cleanFile + '_' + idx,
-            trackName: nameWithoutExt,
-            collectionName: collection,
-            artworkUrl100: artwork,
-            previewUrl: `music/${encodeURIComponent(fileName)}`,
-            localUrl: `music/${encodeURIComponent(fileName)}`,
-            releaseDate: year,
-            primaryGenreName: "R&B/Soul",
-            trackViewUrl: "https://music.apple.com/us/artist/jeff-bernat/487317660"
-          };
-          
-          mergedTracks.push(localTrack);
-        }
-      });
-
-      if (mergedTracks.length > 0) {
-        // Sort tracks so that ones with localUrl (downloaded) appear at the top!
-        mergedTracks.sort((a, b) => {
-          const hasA = (a.localUrl || getLocalAudioUrl(a.trackName)) ? 1 : 0;
-          const hasB = (b.localUrl || getLocalAudioUrl(b.trackName)) ? 1 : 0;
-          return hasB - hasA; // descending order (has local files first)
-        });
-        
-        allBaseTracks = mergedTracks;
-        if (typeof resolveTracksList === 'function') {
-          resolveTracksList();
-        } else {
-          tracks = mergedTracks;
-        }
-        renderLibrary();
-        renderAlbumShelf();
-        loadTrack(currentTrackIndex);
-      }
-    }
-  } catch (e) {
-    console.warn("iTunes API Fetch blocked or failed. Cozy player operating in local playlist fallback.", e);
-  }
-}
 
 // --- 16. Volume System ---
 function handleVolumeChange() {
@@ -3165,46 +2398,15 @@ function initMobileNavigation() {
 
 // Central tracks state resolver (incorporates built-in, custom, and excludes hidden)
 function resolveTracksList() {
-  console.log("Resolving tracks list... Base count:", allBaseTracks.length);
+  tracks = [];
   
-  // Cache the currently active track ID to preserve track selection during re-sorts
-  const activeTrack = tracks[currentTrackIndex];
-  const activeTrackId = activeTrack ? activeTrack.trackId : null;
+  // Filter out hidden custom tracks
+  const visibleCustom = customTracks.filter(t => !hiddenTrackIds.includes(t.trackId));
+  tracks = [...visibleCustom];
   
-  // 1. Filter out hidden/deleted built-in tracks
-  let resolved = allBaseTracks.filter(t => !hiddenTrackIds.includes(t.trackId));
-  
-  // 2. Append custom uploaded tracks
-  customTracks.forEach(custom => {
-    // Avoid duplicates, override if already exists
-    const idx = resolved.findIndex(t => t.trackId === custom.trackId);
-    if (idx !== -1) {
-      resolved[idx] = custom;
-    } else {
-      resolved.push(custom);
-    }
-  });
-  
-  // 3. Keep local audio tracks sorted first for immediate playability
-  resolved.sort((a, b) => {
-    const hasA = (a.localUrl || a.isCustom) ? 1 : 0;
-    const hasB = (b.localUrl || b.isCustom) ? 1 : 0;
-    return hasB - hasA;
-  });
-  
-  tracks = resolved;
-  console.log("Tracks list resolved. Active count:", tracks.length);
-  
-  // Sync the currentTrackIndex with the cached active track ID
-  if (activeTrackId) {
-    const newIdx = tracks.findIndex(t => t.trackId === activeTrackId);
-    if (newIdx !== -1) {
-      currentTrackIndex = newIdx;
-    }
-  }
+  console.log(`Resolved library: ${tracks.length} local tracks.`);
 }
 
-// 1. Initialize IndexedDB
 function initIndexedDB() {
   return new Promise((resolve, reject) => {
     const request = indexedDB.open('CozyPlayerDB', 1);
@@ -3278,6 +2480,7 @@ async function loadCustomTracksFromDB() {
           }
         }
         track.isCustom = true;
+        if (!track.folder) track.folder = "Uncategorized";
         return track;
       });
       
@@ -3391,11 +2594,13 @@ function openEditModal(trackId) {
   const editAlbum = document.getElementById('edit-track-album');
   const editYear = document.getElementById('edit-track-year');
   const editGenre = document.getElementById('edit-track-genre');
+  const editFolder = document.getElementById('edit-track-folder');
   
   if (editTitle) editTitle.value = track.trackName || '';
   if (editAlbum) editAlbum.value = track.collectionName || '';
   if (editYear) editYear.value = track.releaseDate ? new Date(track.releaseDate).getFullYear() : 2026;
   if (editGenre) editGenre.value = track.primaryGenreName || 'R&B/Soul';
+  if (editFolder) editFolder.value = track.folder || 'Uncategorized';
   
   const modal = document.getElementById('cozy-edit-modal');
   if (modal) modal.classList.add('active');
@@ -3790,6 +2995,7 @@ function setupDashboardEventListeners() {
       
       const title = trackTitleInput.value.trim();
       const album = document.getElementById('track-album').value.trim();
+      const folder = document.getElementById('track-folder') ? document.getElementById('track-folder').value.trim() : "Uncategorized";
       const year = document.getElementById('track-year').value.trim();
       const genre = document.getElementById('track-genre').value.trim();
       
@@ -3822,6 +3028,10 @@ function setupDashboardEventListeners() {
       const parsedYear = year ? parseInt(year, 10) : new Date().getFullYear();
       const validYear = isNaN(parsedYear) || parsedYear < 1900 || parsedYear > 2100 ? new Date().getFullYear() : parsedYear;
       
+      showToast("กำลังประมวลผล... ⏳", "บันทึกเพลงระดับสตูดิโอเข้าหน่วยความจำบราวเซอร์...");
+      
+      const duration = await getDurationFromAudioFile(audioFile);
+      
       const customTrack = {
         trackId: trackId,
         trackName: title,
@@ -3832,10 +3042,10 @@ function setupDashboardEventListeners() {
         releaseDate: new Date(validYear, 0, 1).toISOString(),
         primaryGenreName: genre,
         trackViewUrl: '#',
-        isCustom: true
+        isCustom: true,
+        folder: folder || "Uncategorized",
+        trackDuration: duration > 0 ? duration : null
       };
-      
-      showToast("กำลังประมวลผล... ⏳", "บันทึกเพลงระดับสตูดิโอเข้าหน่วยความจำบราวเซอร์...");
       
       try {
         await saveCustomTrackToDB(customTrack);
@@ -3911,6 +3121,7 @@ function setupDashboardEventListeners() {
       const album = document.getElementById('edit-track-album').value.trim();
       const year = document.getElementById('edit-track-year').value.trim();
       const genre = document.getElementById('edit-track-genre').value.trim();
+      const folder = document.getElementById('edit-track-folder') ? document.getElementById('edit-track-folder').value.trim() : "Uncategorized";
       
       // Check if it is custom or built-in track
       const track = tracks.find(t => t.trackId === currentEditingTrackId);
@@ -3933,6 +3144,7 @@ function setupDashboardEventListeners() {
             
             customTrack.releaseDate = new Date(validYear, 0, 1).toISOString();
             customTrack.primaryGenreName = genre;
+            customTrack.folder = folder || "Uncategorized";
             
             await saveCustomTrackToDB(customTrack);
             await loadCustomTracksFromDB();
