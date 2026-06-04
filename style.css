@@ -72,6 +72,7 @@ body {
   background-color: var(--bg-primary);
   color: var(--text-main);
   overflow-x: hidden;
+  overflow-x: clip; /* clip horizontally without making <body> a nested scroll container (fixes short-screen scrolling) */
   min-height: 100vh;
   transition: background-color 1s ease, color 0.4s ease;
   position: relative;
@@ -3985,4 +3986,65 @@ body.music-playing .status-badge {
 .album-shelf-container,
 .mood-switcher-bar {
   -webkit-overflow-scrolling: touch;
+}
+
+/* ==========================================================================
+   Short / landscape screens: let the app scroll instead of clipping content
+   (the mobile layout uses a fixed 100vh shell — on short heights the player
+   controls would be cut off with no way to reach them).
+   ========================================================================== */
+@media (max-width: 1050px) and (max-height: 560px) {
+  html, body {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow-y: visible !important;
+  }
+  .lounge-container {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+  }
+  .lounge-grid {
+    height: auto !important;
+    overflow: visible !important;
+  }
+  /* Drop the absolute slide-shell: active view flows normally, inactive is removed
+     entirely so the document height is correct and the page scrolls cleanly. */
+  .lounge-grid #sidebar-left,
+  .lounge-grid #main-player {
+    position: static !important;
+    transform: none !important;
+    width: 100% !important;
+    height: auto !important;
+  }
+  .lounge-grid.view-lounge #sidebar-left,
+  .lounge-grid.view-playlist #main-player {
+    display: none !important;
+  }
+  .lounge-grid.view-lounge #main-player,
+  .lounge-grid.view-playlist #sidebar-left {
+    display: block !important;
+    opacity: 1 !important;
+  }
+  .player-panel {
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;          /* don't clip controls */
+    justify-content: flex-start !important; /* stack naturally instead of spreading */
+    gap: 10px !important;
+  }
+  #sidebar-left { overflow-y: visible !important; }
+
+  /* Shrink the turntable so the controls fit sooner on short screens */
+  .turntable { width: 150px !important; height: 150px !important; }
+  .turntable-platter { width: 130px !important; height: 130px !important; }
+  .vinyl-record { width: 120px !important; height: 120px !important; }
+  .tonearm { width: 55px !important; height: 80px !important; }
+  .visualizer-container { height: 90px !important; }
+  .library-list-container { min-height: 260px !important; }
+}
+
+/* Very large screens: keep the layout centered and comfortable, not stretched */
+@media (min-width: 1700px) {
+  .lounge-container { max-width: 1600px; }
 }
