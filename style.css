@@ -677,8 +677,17 @@ body[data-session="study-glow"] .player-panel {
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   padding-bottom: 12px;
+}
+
+/* Each filter dropdown wraps onto its own full-width row under the tabs */
+.category-filter-container,
+.folder-filter-container,
+.sort-filter-container {
+  flex: 1 0 100%;
+  width: 100%;
 }
 
 .library-tabs {

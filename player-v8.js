@@ -14,6 +14,28 @@ let LOCAL_FILE_NAMES = [];
 let LOCAL_SONG_DUR = {};   // filename -> real duration (seconds) from songs.json, fixes M4A double-duration bug
 let allBaseTracks = [];
 
+// --- Language / origin categories ---------------------------------------------
+// Stable rule: detect by the actual script in the filename (Thai/Japanese/etc. are
+// unambiguous Unicode ranges). For Asian artists written in English, add their
+// distinctive name below — keep entries unique so they never match a Western song.
+const CATEGORY_OVERRIDES = [
+  { cat: 'ไทย', kw: ['maiyarap', 'z9', 'rain zone', 'phum viphurit', 'pp krit'] },
+  { cat: 'ญี่ปุ่น', kw: ['imase', 'fujii kaze', 'yoasobi', 'yorushika', 'vaundy', 'aimyon', 'kenshi yonezu', 'one ok rock', 'radwimps', 'official hige', 'tatsuro yamashita', 'mariya takeuchi'] }
+];
+
+// Returns one of: 'สากล' (international) | 'ไทย' | 'ญี่ปุ่น' | 'อื่นๆ'
+function detectCategory(filename) {
+  if (!filename) return 'สากล';
+  const lower = filename.toLowerCase();
+  for (const o of CATEGORY_OVERRIDES) {
+    if (o.kw.some(k => lower.includes(k))) return o.cat;
+  }
+  if (/[฀-๿]/.test(filename)) return 'ไทย';                       // Thai script
+  if (/[぀-ゟ゠-ヿ]/.test(filename)) return 'ญี่ปุ่น';        // Hiragana / Katakana
+  if (/[가-힯一-鿿ঀ-৿]/.test(filename)) return 'อื่นๆ'; // Hangul / CJK / Bengali / etc.
+  return 'สากล';
+}
+
 // --- Storage Keys ---
 const STORAGE_KEY_SESSION = 'cozy_session_preset';
 const STORAGE_KEY_THEME   = 'cozy_theme';
@@ -32,6 +54,7 @@ let isShuffle         = false;
 let isRepeat          = false;
 let currentFilter     = 'all';
 let currentFolderFilter = 'all';
+let currentCategory   = 'all';   // language/origin filter: all | สากล | ไทย | ญี่ปุ่น | อื่นๆ
 let currentSessionPreset = null;
 let theme             = 'rain';
 let isLightMode       = false;
@@ -406,6 +429,7 @@ function populateAllLocalTracks() {
       localUrl: `music/${encodeURIComponent(fileName)}`,
       releaseDate: year,
       trackDuration: LOCAL_SONG_DUR[fileName] || null, // real length → corrects doubled M4A duration on every device
+      category: detectCategory(fileName), // สากล / ไทย / ญี่ปุ่น / อื่นๆ
       primaryGenreName: "R&B/Soul",
       trackViewUrl: "https://music.apple.com/us/artist/jeff-bernat/487317660"
     };
@@ -1372,6 +1396,14 @@ function setupDOMEventListeners() {
       renderLibrary();
     });
   }
+
+  const elCategoryFilter = document.getElementById('category-filter');
+  if (elCategoryFilter) {
+    elCategoryFilter.addEventListener('change', (e) => {
+      currentCategory = e.target.value;
+      renderLibrary();
+    });
+  }
   if (elLibTabs) {
     elLibTabs.forEach(tab => {
       tab.addEventListener('click', () => {
@@ -1510,6 +1542,10 @@ function renderLibrary() {
   
   if (currentFolderFilter !== 'all') {
     filteredTracks = filteredTracks.filter(t => (t.folder || 'Uncategorized') === currentFolderFilter);
+  }
+
+  if (currentCategory !== 'all') {
+    filteredTracks = filteredTracks.filter(t => (t.category || detectCategory(t.trackName)) === currentCategory);
   }
 
   // Apply sort order (works on a copy so the real `tracks` index stays intact)

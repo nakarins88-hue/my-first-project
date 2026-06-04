@@ -26,7 +26,7 @@
   <!-- FontAwesome for Premium Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Core Stylesheet -->
-  <link rel="stylesheet" href="style.css?v=16">
+  <link rel="stylesheet" href="style.css?v=17">
   <!-- Visitor Counter Stylesheet -->
   <link rel="stylesheet" href="visitor-counter.css?v=3">
 </head>
@@ -195,6 +195,17 @@
               </button>
             </div>
             
+            <!-- Language / Origin Filter -->
+            <div class="category-filter-container" style="margin-top: 10px;">
+              <select id="category-filter" class="db-input" style="width: 100%; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2);">
+                <option value="all">🌐 ทุกแนวเพลง</option>
+                <option value="สากล">🌎 สากล</option>
+                <option value="ไทย">🇹🇭 ไทย</option>
+                <option value="ญี่ปุ่น">🇯🇵 ญี่ปุ่น</option>
+                <option value="อื่นๆ">🎵 อื่น ๆ</option>
+              </select>
+            </div>
+
             <!-- Folder Filter -->
             <div class="folder-filter-container" style="margin-top: 10px;">
               <select id="folder-filter" class="db-input" style="width: 100%; padding: 8px; border-radius: 8px; background: rgba(255,255,255,0.1); color: #fff; border: 1px solid rgba(255,255,255,0.2);">
@@ -582,7 +593,7 @@
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
   <!-- Main JavaScript File -->
-  <script src="player-v8.js?v=20"></script>
+  <script src="player-v8.js?v=21"></script>
   
   <!-- Real-time Visitor Counter Integration -->
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
