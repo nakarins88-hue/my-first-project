@@ -170,18 +170,6 @@ function initLocalTracks() {
       primaryGenreName: "R&B/Soul",
       trackViewUrl: "https://music.apple.com/us/artist/jeff-bernat/487317660"
     };
-  }).filter(t => {
-    const clean = t.trackName.toLowerCase();
-    return !clean.includes('sped up') &&
-           !clean.includes('acoustic') &&
-           !clean.includes('inst.') &&
-           !clean.includes('inst)') &&
-           !clean.includes('instrumental') &&
-           !clean.includes('intro') &&
-           !clean.includes('interlude') &&
-           !clean.includes('accapella') &&
-           !clean.includes('remix') &&
-           !clean.includes('mix');
   });
 }
 initLocalTracks();
@@ -381,20 +369,8 @@ const BACKUP_TRACKS = [
 ];
 
 function populateAllLocalTracks() {
-  // Filter out any mixes, sped ups, instrumentals, acoustics, intros/interludes, or alternate versions
-  const filteredFileNames = LOCAL_FILE_NAMES.filter(fileName => {
-    const clean = fileName.toLowerCase();
-    return !clean.includes('sped up') &&
-           !clean.includes('acoustic') &&
-           !clean.includes('inst.') &&
-           !clean.includes('inst)') &&
-           !clean.includes('instrumental') &&
-           !clean.includes('intro') &&
-           !clean.includes('interlude') &&
-           !clean.includes('accapella') &&
-           !clean.includes('remix') &&
-           !clean.includes('mix');
-  });
+  // Show every song the user adds — no auto-hiding of remixes/instrumentals/etc.
+  const filteredFileNames = LOCAL_FILE_NAMES;
 
   const localTracks = filteredFileNames.map((fileName, idx) => {
     const nameWithoutExt = fileName.replace(/\.[^/.]+$/, "");
