@@ -11,6 +11,7 @@ let currentSort = 'date-desc';
 let appSettings = { playbackSpeed: 1.0 };
 let elProgressModal, elProgressText;
 let LOCAL_FILE_NAMES = [];
+let LOCAL_SONG_DUR = {};   // filename -> real duration (seconds) from songs.json, fixes M4A double-duration bug
 let allBaseTracks = [];
 
 // --- Storage Keys ---
@@ -404,6 +405,7 @@ function populateAllLocalTracks() {
       previewUrl: `music/${encodeURIComponent(fileName)}`,
       localUrl: `music/${encodeURIComponent(fileName)}`,
       releaseDate: year,
+      trackDuration: LOCAL_SONG_DUR[fileName] || null, // real length → corrects doubled M4A duration on every device
       primaryGenreName: "R&B/Soul",
       trackViewUrl: "https://music.apple.com/us/artist/jeff-bernat/487317660"
     };
@@ -1089,6 +1091,8 @@ async function loadSongsJSON() {
     if (!res.ok) throw new Error('songs.json not found');
     const songs = await res.json();
     LOCAL_FILE_NAMES = songs.map(s => s.filename);
+    LOCAL_SONG_DUR = {};
+    songs.forEach(s => { if (s.duration) LOCAL_SONG_DUR[s.filename] = s.duration; });
   } catch (e) {
     console.warn('songs.json load failed, playlist will be empty:', e);
     LOCAL_FILE_NAMES = [];
