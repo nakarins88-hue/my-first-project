@@ -670,7 +670,8 @@ body[data-session="study-glow"] .player-panel {
 
 /* Favorites Panel List */
 .library-widget {
-  max-height: 450px;
+  flex: 1 1 auto;
+  min-height: 0; /* let the inner list scroll instead of overflowing the panel */
 }
 
 .library-header {
@@ -721,8 +722,9 @@ body[data-session="study-glow"] .player-panel {
 .library-list-container {
   overflow-y: auto;
   padding-right: 4px;
-  height: 250px;
-  max-height: 250px;
+  flex: 1 1 auto;
+  min-height: 300px;                              /* show a generous number of songs */
+  max-height: min(560px, calc(100vh - 320px));    /* cap so it scrolls internally, never blows up the page */
 }
 
 .library-list {
@@ -1953,10 +1955,10 @@ body[data-session="study-glow"] .player-panel {
   }
 
   .library-list-container {
-    flex: 1 1 0 !important;
+    flex: 1 1 auto !important;
     height: auto !important;
     max-height: none !important;
-    min-height: 120px !important;
+    min-height: 55vh !important; /* generous song list on phones (scrolls beyond) */
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
   }
