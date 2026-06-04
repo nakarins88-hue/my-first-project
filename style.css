@@ -828,6 +828,33 @@ body[data-session="study-glow"] .player-panel {
   100% { transform: scale(1); }
 }
 
+/* Upload progress modal — hidden unless explicitly activated (was unstyled,
+   so it leaked "กำลังประมวลผลไฟล์..." into normal flow at the bottom of the page) */
+.modal-overlay {
+  display: none !important;
+  position: fixed;
+  inset: 0;
+  z-index: 12000;
+  background: rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.modal-overlay.active {
+  display: flex !important;
+}
+.modal-overlay .modal-content {
+  background: var(--bg-secondary, #101420);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  padding: 24px 28px;
+  max-width: 360px;
+  width: 100%;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+}
+
 /* Loading & Empty States */
 .loading-state, .empty-state {
   display: flex;
@@ -1948,20 +1975,40 @@ body[data-session="study-glow"] .player-panel {
   }
 
   .library-widget {
-    max-height: 100% !important;
-    height: 100% !important;
+    max-height: none !important;
+    height: auto !important;
     display: flex !important;
     flex-direction: column !important;
     min-height: 0 !important;
+    flex: none !important; /* size to content so the fixed-height list doesn't overflow onto the mixer */
   }
 
+  /* Definite height (not flex) so the song list ALWAYS renders & scrolls internally */
   .library-list-container {
-    flex: 1 1 auto !important;
-    height: auto !important;
+    flex: none !important;
+    height: 58vh !important;
     max-height: none !important;
-    min-height: 55vh !important; /* generous song list on phones (scrolls beyond) */
+    min-height: 0 !important;
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch;
+  }
+
+  /* Hide the local file import zone on mobile to save vertical space for the song list */
+  .local-import-zone {
+    display: none !important;
+  }
+
+  /* Compact filters on mobile — shrink gap between dropdowns */
+  .category-filter-container,
+  .folder-filter-container,
+  .sort-filter-container {
+    margin-top: 6px !important;
+  }
+  .category-filter-container select,
+  .folder-filter-container select,
+  .sort-filter-container select {
+    padding: 6px 8px !important;
+    font-size: 0.78rem !important;
   }
 
   /* Make sidebar scrollable so mixer + playlist don't get cut off */
@@ -4047,4 +4094,16 @@ body.music-playing .status-badge {
 /* Very large screens: keep the layout centered and comfortable, not stretched */
 @media (min-width: 1700px) {
   .lounge-container { max-width: 1600px; }
+}
+
+/* Mobile "Playlist" view: show the song list FIRST so it's visible immediately;
+   the Ambient Mixer drops below (the mixer used to push songs off-screen). */
+@media (max-width: 1050px) {
+  #sidebar-left .library-widget { order: -1 !important; }
+  #sidebar-left .mixer-widget   { order: 0 !important; }
+  /* Ensure sidebar is a flex column so order property works on iOS Safari */
+  #sidebar-left {
+    display: flex !important;
+    flex-direction: column !important;
+  }
 }
