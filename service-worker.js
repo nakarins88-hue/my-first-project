@@ -2,7 +2,7 @@
 // Jeff Bernat Cozy Music Lounge - Service Worker (PWA + Background Audio)
 // ==========================================================================
 
-const CACHE_NAME = 'cozy-lounge-v1';
+const CACHE_NAME = 'cozy-lounge-v2';
 
 // App shell files to pre-cache for fast loading
 const APP_SHELL = [
@@ -65,6 +65,11 @@ self.addEventListener('fetch', (event) => {
 
   // Skip music files — they are too large to cache and stream fine on their own
   if (url.pathname.startsWith('/music/') || url.pathname.endsWith('.mp3') || url.pathname.endsWith('.m4a')) {
+    return;
+  }
+
+  // Never cache the playlist — always fetch fresh so newly added songs show up right away
+  if (url.pathname.endsWith('songs.json')) {
     return;
   }
 

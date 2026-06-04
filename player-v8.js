@@ -17,6 +17,8 @@ let allBaseTracks = [];
 const STORAGE_KEY_SESSION = 'cozy_session_preset';
 const STORAGE_KEY_THEME   = 'cozy_theme';
 const STORAGE_KEY_HIDDEN  = 'cozy_hidden_tracks';
+const STORAGE_KEY_LAST    = 'cozy_last_track';   // {id, t} — resume last played song & position
+let lastTrackSaveAt = 0;                          // throttle timestamp for saving resume position
 
 // --- Playback & Library State ---
 let tracks            = [];
@@ -522,6 +524,31 @@ function updatePlayerUIPlaying(playing) {
   document.body.classList.toggle('music-playing', playing);
   if (playing) spawnHeartParticles();
   else clearInterval(heartSpawnInterval);
+
+  // Keep the OS lock-screen / notification controls in sync for stable background playback
+  if ('mediaSession' in navigator) {
+    try { navigator.mediaSession.playbackState = playing ? 'playing' : 'paused'; } catch (e) { /* ignore */ }
+  }
+  if (playing) updateMediaPositionState();
+}
+
+// Reports accurate duration/position to the OS so the lock-screen scrub bar stays correct on every device
+function updateMediaPositionState() {
+  if (!('mediaSession' in navigator) || typeof navigator.mediaSession.setPositionState !== 'function') return;
+  if (!elMainAudio) return;
+  const track = tracks[currentTrackIndex];
+  const duration = getCorrectedDuration(elMainAudio, track);
+  if (!isFinite(duration) || duration <= 0) return;
+  let position = elMainAudio.currentTime || 0;
+  if (!isFinite(position) || position < 0) position = 0;
+  if (position > duration) position = duration;
+  try {
+    navigator.mediaSession.setPositionState({
+      duration: duration,
+      playbackRate: elMainAudio.playbackRate || 1,
+      position: position
+    });
+  } catch (e) { /* invalid state — ignore */ }
 }
 // --- Helper: Decode audio file duration via AudioContext ---
 function getDurationFromAudioFile(file) {
@@ -731,6 +758,30 @@ function loadTrack(index) {
   const colors = ['56, 189, 248', '244, 114, 182', '167, 139, 250', '251, 146, 60', '52, 211, 153'];
   activeAccentRgb = colors[index % colors.length];
   document.documentElement.style.setProperty('--accent-glow', activeAccentRgb);
+}
+
+// Resume the last played song (and position) instead of always starting at track 0
+function restoreLastTrack() {
+  if (tracks.length === 0) return;
+  let saved = null;
+  try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY_LAST)); } catch (e) { /* ignore */ }
+
+  let index = 0;
+  if (saved && saved.id) {
+    const found = tracks.findIndex(t => t.trackId === saved.id);
+    if (found !== -1) index = found;
+  }
+
+  loadTrack(index);
+
+  // Seek to the saved position (kept paused) once the audio is ready
+  if (saved && saved.t > 1 && elMainAudio) {
+    const seek = () => {
+      try { elMainAudio.currentTime = saved.t; } catch (e) { /* ignore */ }
+      elMainAudio.removeEventListener('canplay', seek);
+    };
+    elMainAudio.addEventListener('canplay', seek);
+  }
 }
 
 function playAudio() {
@@ -1033,7 +1084,8 @@ function spawnHeartParticles() {
 // Fetches songs.json and populates LOCAL_FILE_NAMES before the player initializes
 async function loadSongsJSON() {
   try {
-    const res = await fetch('songs.json');
+    // Cache-bust + no-store so newly added songs appear immediately after re-running update_songs.ps1
+    const res = await fetch('songs.json?v=' + Date.now(), { cache: 'no-store' });
     if (!res.ok) throw new Error('songs.json not found');
     const songs = await res.json();
     LOCAL_FILE_NAMES = songs.map(s => s.filename);
@@ -1155,6 +1207,7 @@ function setupDOMEventListeners() {
           const displayDuration = getCorrectedDuration(elMainAudio, currentTrack);
           elTotalDurationDisplay.textContent = formatTime(displayDuration);
         }
+        updateMediaPositionState();
       }
     });
 
@@ -1166,6 +1219,7 @@ function setupDOMEventListeners() {
           const displayDuration = getCorrectedDuration(elMainAudio, currentTrack);
           elTotalDurationDisplay.textContent = formatTime(displayDuration);
         }
+        updateMediaPositionState();
       }
     });
 
@@ -1211,6 +1265,18 @@ function setupDOMEventListeners() {
         }
         syncLyricsHighlight(currentTime);
       }
+
+      // Persist resume point (throttled to once every 5s) so the app can continue where you left off
+      const nowTs = Date.now();
+      if (currentTrack && nowTs - lastTrackSaveAt > 5000) {
+        lastTrackSaveAt = nowTs;
+        try {
+          localStorage.setItem(STORAGE_KEY_LAST, JSON.stringify({ id: currentTrack.trackId, t: currentTime }));
+        } catch (e) { /* storage full / disabled — ignore */ }
+      }
+
+      // Keep lock-screen scrub position accurate
+      updateMediaPositionState();
     });
 
     elMainAudio.addEventListener('ended', () => {
@@ -1269,6 +1335,16 @@ function setupDOMEventListeners() {
 
   if (elProgressContainer) elProgressContainer.addEventListener('click', setProgress);
   if (elPlayerVolume) elPlayerVolume.addEventListener('input', handleVolumeChange);
+
+  // Paint the filled portion of every volume slider (WebKit needs a JS-driven gradient)
+  const paintSliderFill = (slider) => {
+    const max = slider.max || 100;
+    slider.style.setProperty('--fill', (slider.value / max * 100) + '%');
+  };
+  document.querySelectorAll('.volume-slider').forEach(slider => {
+    paintSliderFill(slider);
+    slider.addEventListener('input', () => paintSliderFill(slider));
+  });
 
   if (elPlayerVolumeIcon && elPlayerVolume) {
     elPlayerVolumeIcon.addEventListener('click', () => {
@@ -1431,7 +1507,21 @@ function renderLibrary() {
   if (currentFolderFilter !== 'all') {
     filteredTracks = filteredTracks.filter(t => (t.folder || 'Uncategorized') === currentFolderFilter);
   }
-  
+
+  // Apply sort order (works on a copy so the real `tracks` index stays intact)
+  filteredTracks = [...filteredTracks];
+  if (currentSort === 'title-asc') {
+    filteredTracks.sort((a, b) => a.trackName.localeCompare(b.trackName, 'th'));
+  } else if (currentSort === 'title-desc') {
+    filteredTracks.sort((a, b) => b.trackName.localeCompare(a.trackName, 'th'));
+  } else if (currentSort === 'shuffle') {
+    for (let i = filteredTracks.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [filteredTracks[i], filteredTracks[j]] = [filteredTracks[j], filteredTracks[i]];
+    }
+  }
+  // 'date-desc' (default) keeps the natural catalog order
+
   if (filteredTracks.length === 0) {
     elLibraryList.innerHTML = `
       <div class="empty-state">
@@ -1525,7 +1615,10 @@ function renderAlbumShelf() {
 function handleVolumeChange() {
   if (!elPlayerVolume) return;
   const vol = elPlayerVolume.value;
-  
+
+  // Keep the filled track in sync (also when value changes via the mute toggle)
+  elPlayerVolume.style.setProperty('--fill', vol + '%');
+
   // Update HTML5 audio volume (0.0 to 1.0)
   if (elMainAudio) {
     elMainAudio.volume = vol / 100;
@@ -2232,29 +2325,41 @@ function drawPlayerVisualizer() {
   const canvasCtx = elVisualizerCanvas.getContext('2d');
   
   canvasCtx.clearRect(0, 0, width, height);
-  
-  const bandsCount = 28;
-  const barWidth = width / bandsCount;
-  
-  for (let i = 0; i < bandsCount; i++) {
-    let baseHeight = 15;
-    
-    if (isPlaying) {
-      baseHeight = 20 + Math.sin(i * 0.4 + waveOffset) * 20 + Math.cos(i * 0.7 - waveOffset * 0.5) * 25;
-      baseHeight += Math.random() * 10;
-      baseHeight = Math.max(10, Math.min(height - 20, baseHeight));
+
+  // Soft pastel gradient (pink → lavender → sky) for cute flowing wave lines
+  const pastel = canvasCtx.createLinearGradient(0, 0, width, 0);
+  pastel.addColorStop(0, 'rgba(244, 182, 226, 0.95)');
+  pastel.addColorStop(0.5, 'rgba(196, 181, 253, 0.95)');
+  pastel.addColorStop(1, 'rgba(165, 216, 255, 0.95)');
+
+  const mid = height * 0.6;
+  const amp = isPlaying ? 26 : 5;
+  const step = 6;
+
+  // Two layered waves: a bold front line + a soft trailing echo
+  for (let layer = 0; layer < 2; layer++) {
+    const phase = waveOffset + layer * 1.4;
+    const layerAmp = amp * (layer === 0 ? 1 : 0.55);
+
+    canvasCtx.beginPath();
+    for (let x = 0; x <= width; x += step) {
+      const y = mid
+        + Math.sin(x * 0.018 + phase) * layerAmp
+        + Math.sin(x * 0.045 - phase * 1.3) * (layerAmp * 0.4);
+      if (x === 0) canvasCtx.moveTo(x, y);
+      else canvasCtx.lineTo(x, y);
     }
-    
-    const grad = canvasCtx.createLinearGradient(0, height, 0, height - baseHeight);
-    grad.addColorStop(0, `rgba(${activeAccentRgb}, 0.04)`);
-    grad.addColorStop(0.5, `rgba(${activeAccentRgb}, 0.22)`);
-    grad.addColorStop(1, `rgba(${activeAccentRgb}, 0.48)`);
-    
-    canvasCtx.fillStyle = grad;
-    canvasCtx.fillRect(i * barWidth, height - baseHeight, barWidth - 4, baseHeight);
-    canvasCtx.fillRect(width - (i * barWidth) - barWidth, height - baseHeight, barWidth - 4, baseHeight);
+    canvasCtx.strokeStyle = pastel;
+    canvasCtx.lineWidth = layer === 0 ? 3 : 1.6;
+    canvasCtx.globalAlpha = layer === 0 ? 0.95 : 0.45;
+    canvasCtx.lineCap = 'round';
+    canvasCtx.shadowColor = 'rgba(196, 181, 253, 0.8)';
+    canvasCtx.shadowBlur = 12;
+    canvasCtx.stroke();
   }
-  
+  canvasCtx.globalAlpha = 1;
+  canvasCtx.shadowBlur = 0;
+
   if (isPlaying) {
     waveOffset += 0.085;
   }
@@ -2571,11 +2676,11 @@ function initCozyDashboard() {
       renderLibrary();
       renderAlbumShelf();
       
-      // Ensure player initializes with the correct track safely
+      // Ensure player initializes with the correct track safely (resume last played song)
       if (tracks.length > 0) {
-        loadTrack(0);
+        restoreLastTrack();
       }
-      
+
       // C. Set up UI event listeners
       setupDashboardEventListeners();
     })
@@ -2585,7 +2690,7 @@ function initCozyDashboard() {
       resolveTracksList();
       renderLibrary();
       renderAlbumShelf();
-      if (tracks.length > 0) loadTrack(0);
+      if (tracks.length > 0) restoreLastTrack();
     });
 }
 

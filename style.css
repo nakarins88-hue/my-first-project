@@ -544,9 +544,15 @@ body[data-session="study-glow"] .player-panel {
 /* General Custom Range Sliders */
 .volume-slider {
   flex-grow: 1;
+  min-width: 0;            /* prevent the slider from overflowing its flex wrapper */
   -webkit-appearance: none;
   appearance: none;
-  background: rgba(255, 255, 255, 0.08);
+  /* Filled portion (left of thumb) in accent, rest faded — driven by --fill from JS */
+  background: linear-gradient(to right,
+              var(--accent) 0%,
+              var(--accent) var(--fill, 30%),
+              rgba(255, 255, 255, 0.12) var(--fill, 30%),
+              rgba(255, 255, 255, 0.12) 100%);
   height: 6px;
   border-radius: 10px;
   outline: none;
@@ -554,37 +560,69 @@ body[data-session="study-glow"] .player-panel {
   transition: var(--transition-fast);
 }
 
+/* WebKit / Chrome / Edge track — transparent so the element background gradient shows */
 .volume-slider::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 10px;
+  background: transparent;
+}
+
+/* Firefox track + native filled progress */
+.volume-slider::-moz-range-track {
+  height: 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+}
+.volume-slider::-moz-range-progress {
+  height: 6px;
+  border-radius: 10px;
+  background: var(--accent);
 }
 
 .volume-slider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 12px;
-  height: 12px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: var(--text-main);
-  box-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  background: #fff;
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 8px rgba(var(--accent-glow, 244, 114, 182), 0.7);
   cursor: pointer;
-  margin-top: -3px;
-  transition: transform 0.1s ease;
+  margin-top: -4px;        /* centre the 14px thumb on the 6px track (no edge clipping) */
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.volume-slider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid var(--accent);
+  box-shadow: 0 0 8px rgba(var(--accent-glow, 244, 114, 182), 0.7);
+  cursor: pointer;
+  transition: transform 0.15s ease;
 }
 
-.volume-slider::-webkit-slider-thumb:hover {
-  transform: scale(1.3);
-  background: var(--accent);
+.volume-slider:hover::-webkit-slider-thumb,
+.volume-slider:active::-webkit-slider-thumb {
+  transform: scale(1.25);
+  box-shadow: 0 0 14px rgba(var(--accent-glow, 244, 114, 182), 0.95);
+}
+.volume-slider:hover::-moz-range-thumb {
+  transform: scale(1.25);
 }
 
 .volume-slider.small {
-  height: 4px;
+  height: 5px;
 }
-
 .volume-slider.small::-webkit-slider-thumb {
-  width: 10px;
-  height: 10px;
-  margin-top: -3px;
+  width: 12px;
+  height: 12px;
+  margin-top: -3.5px;
+}
+.volume-slider.small::-moz-range-thumb {
+  width: 12px;
+  height: 12px;
 }
 
 /* Master Button */
@@ -3200,7 +3238,8 @@ html {
 
 /* Volume sliders scale transition */
 .volume-slider::-webkit-slider-thumb {
-  transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1), 
+  transition: transform 0.2s cubic-bezier(0.25, 0.8, 0.25, 1),
+              box-shadow 0.2s ease,
               background-color 0.2s ease !important;
 }
 
@@ -3833,4 +3872,106 @@ body.theme-candle {
   10%  { opacity: 0.5; }
   80%  { opacity: 0.3; }
   100% { transform: translateY(-105vh) scale(1.1) rotate(12deg); opacity: 0; }
+}
+
+/* ==========================================================================
+   Cute "dance to the beat" animations (active only while music is playing)
+   ========================================================================== */
+
+/* Album / turntable gently bounces & glows to a soft beat */
+@keyframes coverBeat {
+  0%, 100% { transform: scale(1);    }
+  50%      { transform: scale(1.045); }
+}
+@keyframes coverGlow {
+  0%, 100% { box-shadow: 0 0 26px rgba(var(--accent-glow, 244, 114, 182), 0.25); }
+  50%      { box-shadow: 0 0 46px rgba(var(--accent-glow, 244, 114, 182), 0.55); }
+}
+body.music-playing .turntable-wrapper {
+  animation: coverBeat 0.85s ease-in-out infinite;
+  will-change: transform;
+}
+body.music-playing .turntable {
+  border-radius: 50%;
+  animation: coverGlow 0.85s ease-in-out infinite;
+}
+
+/* Big play/pause button breathes softly while playing */
+@keyframes playPulse {
+  0%, 100% { transform: scale(1);    box-shadow: 0 0 0 0 rgba(var(--accent-glow, 244, 114, 182), 0.5); }
+  50%      { transform: scale(1.08); box-shadow: 0 0 0 10px rgba(var(--accent-glow, 244, 114, 182), 0); }
+}
+body.music-playing .play-pause-btn {
+  animation: playPulse 1.6s ease-in-out infinite;
+}
+/* Cute squish feedback on press */
+.play-pause-btn:active {
+  transform: scale(0.9) !important;
+}
+
+/* NOW PLAYING badge does a tiny happy wiggle on the beat */
+@keyframes badgeWiggle {
+  0%, 100% { transform: rotate(0deg);   }
+  25%      { transform: rotate(-2.5deg); }
+  75%      { transform: rotate(2.5deg);  }
+}
+body.music-playing .status-badge {
+  animation: badgeWiggle 1.2s ease-in-out infinite;
+  transform-origin: center;
+}
+
+/* Respect users who prefer reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  body.music-playing .turntable-wrapper,
+  body.music-playing .turntable,
+  body.music-playing .play-pause-btn,
+  body.music-playing .status-badge {
+    animation: none !important;
+  }
+}
+
+/* ==========================================================================
+   Cross-device stability: dynamic viewport height + small-phone tuning
+   ========================================================================== */
+
+/* Use dynamic viewport units on mobile so the layout doesn't jump / get cut off
+   when the browser address bar shows/hides (iOS Safari, Chrome Android). */
+@supports (height: 100dvh) {
+  @media (max-width: 1050px) {
+    .lounge-container { height: 100dvh; }
+    .lounge-grid { height: calc(100dvh - 160px); }
+  }
+}
+
+/* Small phones (≤480px): scale the turntable & tighten spacing so nothing overflows */
+@media (max-width: 480px) {
+  .brand-title { font-size: 1.4rem; }
+
+  .turntable { width: 200px; height: 200px; }
+  .turntable-platter { width: 172px; height: 172px; }
+  .vinyl-record { width: 160px; height: 160px; }
+
+  .track-title-main { font-size: 1.15rem; }
+  .player-panel { padding: 16px 14px; }
+  .visualizer-container { height: 130px; }
+
+  /* Keep controls comfortably tappable */
+  .control-btn { font-size: 1.05rem; }
+  .play-pause-btn {
+    width: 52px !important;
+    height: 52px !important;
+  }
+
+  /* Prevent the album shelf footer from hiding behind the fixed mobile nav bar */
+  .lounge-footer { padding-bottom: 80px; }
+
+  /* Volume control gets a touch more room on tiny screens */
+  .player-volume-wrapper { width: 96px; }
+}
+
+/* Smooth momentum scrolling for horizontal/vertical scrollers on touch devices */
+.library-list-container,
+.album-shelf-container,
+.mood-switcher-bar {
+  -webkit-overflow-scrolling: touch;
 }
