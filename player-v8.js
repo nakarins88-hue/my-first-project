@@ -1008,7 +1008,7 @@ function syncLyricsHighlight(currentTime) {
 }
 
 // --- 10. Cozy Toast Banner ---
-function showToast(title = "Welcome to Cozy Lounge", desc = "คลิกปรับแต่งมู้ดที่ต้องการได้เลยค่ะ 🌙") {
+function showToast(title = "Welcome to Cozy Lounge", desc = "คลิกปรับแต่งมู้ดที่ต้องการได้เลยค่ะ 🌙", duration = 6000) {
   if (!elCozyToast) return;
   const titleEl = elCozyToast.querySelector('.toast-title');
   const descEl = elCozyToast.querySelector('.toast-desc');
@@ -1017,11 +1017,36 @@ function showToast(title = "Welcome to Cozy Lounge", desc = "คลิกปร�
   elCozyToast.classList.add('active');
 
   if (cozyToastTimer) clearTimeout(cozyToastTimer);
-  
+
   cozyToastTimer = setTimeout(() => {
     if (elCozyToast) elCozyToast.classList.remove('active');
     cozyToastTimer = null;
-  }, 6000);
+  }, duration);
+}
+
+// Detects songs added since the last visit and announces them in a toast
+function notifyNewSongs() {
+  try {
+    const KEY = 'cozy_known_songs';
+    const current = tracks.map(t => t.trackName);
+    let known = [];
+    try { known = JSON.parse(localStorage.getItem(KEY)) || []; } catch (e) { /* ignore */ }
+
+    const firstRun = known.length === 0;
+    const knownSet = new Set(known);
+    const fresh = current.filter(n => !knownSet.has(n));
+
+    // Remember the current catalog for next time
+    localStorage.setItem(KEY, JSON.stringify(current));
+
+    if (firstRun || fresh.length === 0) return;
+
+    const maxShow = 4;
+    let desc = fresh.slice(0, maxShow).map(n => '🎵 ' + n).join('\n');
+    if (fresh.length > maxShow) desc += `\n…และอีก ${fresh.length - maxShow} เพลง`;
+
+    showToast(`มีเพลงใหม่ ${fresh.length} เพลง! 🎉`, desc, 11000);
+  } catch (e) { /* never block startup on this */ }
 }
 
 // --- 11. floating notes particle system ---
@@ -2723,6 +2748,9 @@ function initCozyDashboard() {
 
       // C. Set up UI event listeners
       setupDashboardEventListeners();
+
+      // D. Announce any songs added since the last visit
+      setTimeout(notifyNewSongs, 2600);
     })
     .catch(err => {
       console.error("Dashboard engine boot failure:", err);

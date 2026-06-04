@@ -1627,6 +1627,7 @@ body[data-session="study-glow"] .player-panel {
   gap: 14px;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
   z-index: 1000;
+  max-width: min(340px, calc(100vw - 48px));
   transform: translateY(120px);
   opacity: 0;
   transition: transform 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.4s ease;
@@ -1664,6 +1665,9 @@ body[data-session="study-glow"] .player-panel {
 .toast-desc {
   font-size: 0.72rem;
   color: var(--text-sub);
+  white-space: pre-line; /* render new-song lists on separate lines */
+  line-height: 1.5;
+  word-break: break-word;
 }
 
 /* ==========================================================================

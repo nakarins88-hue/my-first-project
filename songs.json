@@ -420,6 +420,12 @@
         "duration":  224
     },
     {
+        "filename":  "CURSE (รักใครไม่เป็น) (feat. 2K, Saran).m4a",
+        "path":  "music/CURSE%20(%E0%B8%A3%E0%B8%B1%E0%B8%81%E0%B9%83%E0%B8%84%E0%B8%A3%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B9%80%E0%B8%9B%E0%B9%87%E0%B8%99)%20(feat.%202K%2C%20Saran).m4a",
+        "cover":  "default_cover.png",
+        "duration":  253
+    },
+    {
         "filename":  "d4vd - Sleep Well.m4a",
         "path":  "music/d4vd%20-%20Sleep%20Well.m4a",
         "cover":  "default_cover.png",
@@ -1920,6 +1926,12 @@
         "duration":  204
     },
     {
+        "filename":  "Sexski YSL GIRL Feat. MEYOU [Official MV].m4a",
+        "path":  "music/Sexski%20YSL%20GIRL%20Feat.%20MEYOU%20%5BOfficial%20MV%5D.m4a",
+        "cover":  "default_cover.png",
+        "duration":  193
+    },
+    {
         "filename":  "Shawn Mendes - Heartbeat.m4a",
         "path":  "music/Shawn%20Mendes%20-%20Heartbeat.m4a",
         "cover":  "default_cover.png",
@@ -2352,6 +2364,12 @@
         "duration":  46
     },
     {
+        "filename":  "Z9 บทสรุปสุดท้าย (Prod. by MARXPOLA) ｜ D!EOUT.m4a",
+        "path":  "music/Z9%20%E0%B8%9A%E0%B8%97%E0%B8%AA%E0%B8%A3%E0%B8%B8%E0%B8%9B%E0%B8%AA%E0%B8%B8%E0%B8%94%E0%B8%97%E0%B9%89%E0%B8%B2%E0%B8%A2%20(Prod.%20by%20MARXPOLA)%20%EF%BD%9C%20D!EOUT.m4a",
+        "cover":  "default_cover.png",
+        "duration":  311
+    },
+    {
         "filename":  "Zachary Knowles - WRONG SIDE.m4a",
         "path":  "music/Zachary%20Knowles%20-%20WRONG%20SIDE.m4a",
         "cover":  "default_cover.png",
@@ -2368,6 +2386,18 @@
         "path":  "music/Zack%20Tabudlo%20ft.%20Billkin%20-%20Give%20Me%20Your%20Forever.m4a",
         "cover":  "default_cover.png",
         "duration":  244
+    },
+    {
+        "filename":  "แมว จิรศักดิ์ ft. SARAN ＂ไม่ถือสา＂ (7ZGT REMIX).m4a",
+        "path":  "music/%E0%B9%81%E0%B8%A1%E0%B8%A7%20%E0%B8%88%E0%B8%B4%E0%B8%A3%E0%B8%A8%E0%B8%B1%E0%B8%81%E0%B8%94%E0%B8%B4%E0%B9%8C%20ft.%20SARAN%20%EF%BC%82%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%96%E0%B8%B7%E0%B8%AD%E0%B8%AA%E0%B8%B2%EF%BC%82%20(7ZGT%20REMIX).m4a",
+        "cover":  "default_cover.png",
+        "duration":  271
+    },
+    {
+        "filename":  "ข้อ.m4a",
+        "path":  "music/%E0%B8%82%E0%B9%89%E0%B8%AD.m4a",
+        "cover":  "default_cover.png",
+        "duration":  195
     },
     {
         "filename":  "다운 (Dvwn) \u0027HOME.m4a",
