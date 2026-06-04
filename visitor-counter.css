@@ -35,10 +35,38 @@
   }
 }
 
+.visitor-counter-widget {
+  cursor: pointer;
+}
+
 .visitor-counter-widget:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 36px 0 rgba(var(--accent-rgb, 56, 189, 248), 0.25);
   border-color: rgba(var(--accent-rgb, 56, 189, 248), 0.35);
+}
+
+/* ---- Compact count badge (only visible when collapsed) ---- */
+.visitor-counter-count {
+  display: none;
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--text-main, #f1f5f9);
+  min-width: 12px;
+  text-align: center;
+  letter-spacing: 0.3px;
+}
+
+/* Collapsed = tidy little pill showing just the live dot + listener count */
+.visitor-counter-widget.collapsed {
+  gap: 8px;
+  padding: 9px 15px;
+  border-radius: 999px;
+}
+.visitor-counter-widget.collapsed .visitor-counter-content {
+  display: none;
+}
+.visitor-counter-widget.collapsed .visitor-counter-count {
+  display: inline-block;
 }
 
 /* Status Indicator Dot */

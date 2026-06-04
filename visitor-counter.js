@@ -32,6 +32,8 @@
   let textIndex = 0;
   let widgetEl = null;
   let textEl = null;
+  let countEl = null;
+  let autoCollapseTimer = null;
 
   // Rotating warm/romantic Thai phrases depending on user count
   const soloMessages = [
@@ -90,10 +92,36 @@
     content.appendChild(textEl);
     content.appendChild(label);
 
+    // Compact count badge — the only thing shown once the widget collapses
+    countEl = document.createElement('span');
+    countEl.className = 'visitor-counter-count';
+    countEl.innerText = '1';
+
     widgetEl.appendChild(dotWrapper);
     widgetEl.appendChild(content);
+    widgetEl.appendChild(countEl);
 
     document.body.appendChild(widgetEl);
+
+    // Tap to expand/collapse manually
+    widgetEl.addEventListener('click', () => {
+      if (autoCollapseTimer) { clearTimeout(autoCollapseTimer); autoCollapseTimer = null; }
+      widgetEl.classList.toggle('collapsed');
+      widgetEl.title = widgetEl.classList.contains('collapsed')
+        ? 'คนกำลังฟังอยู่ตอนนี้ • แตะเพื่อดูรายละเอียด'
+        : 'แตะเพื่อย่อเก็บ';
+    });
+  }
+
+  // Collapse the full bar down to the small count-only button
+  function scheduleAutoCollapse() {
+    if (autoCollapseTimer || !widgetEl) return;
+    autoCollapseTimer = setTimeout(() => {
+      if (widgetEl) {
+        widgetEl.classList.add('collapsed');
+        widgetEl.title = 'คนกำลังฟังอยู่ตอนนี้ • แตะเพื่อดูรายละเอียด';
+      }
+    }, 6000); // show the welcome bar for ~6s, then tuck it away
   }
 
   // Re-render and transition text smoothly
@@ -104,7 +132,10 @@
     activeUsers.set(myId, Date.now());
 
     const totalCount = activeUsers.size;
-    
+
+    // Keep the compact count badge live (this is what's shown when collapsed)
+    if (countEl) countEl.innerText = totalCount;
+
     // Smooth micro-fade transitions
     textEl.style.opacity = '0';
     setTimeout(() => {
@@ -264,7 +295,8 @@
   // Run presence module
   onReady(() => {
     initUI();
-    
+    scheduleAutoCollapse(); // welcome the user, then collapse to the tidy count button
+
     loadMQTTLibrary(() => {
       connectBroker();
 
