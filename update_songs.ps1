@@ -56,3 +56,34 @@ Set-Content -Path $outputFile -Value $json -Encoding UTF8
 
 $withDur = ($songs | Where-Object { $null -ne $_.duration }).Count
 Write-Host "Generated songs.json with $($songs.Count) songs ($withDur with duration, Length column = $lengthCol) -> $outputFile"
+
+# ============================================================================
+#  Auto-upload to GitHub so the live website updates (run this ONE file, done)
+# ============================================================================
+Write-Host ""
+Write-Host "Uploading to GitHub..."
+
+Push-Location $PSScriptRoot
+try {
+    git add . | Out-Null
+    git diff --cached --quiet
+    if ($LASTEXITCODE -ne 0) {
+        $stamp = Get-Date -Format "yyyy-MM-dd HH:mm"
+        git commit -m "Update songs ($($songs.Count) total) - $stamp" | Out-Null
+        git push
+        if ($LASTEXITCODE -eq 0) {
+            Write-Host ""
+            Write-Host "DONE! Songs uploaded. The website updates in about 1 minute." -ForegroundColor Green
+            Write-Host "Open the site and refresh (Ctrl+Shift+R) to see new songs."
+        } else {
+            Write-Host ""
+            Write-Host "Push FAILED. Check your internet / GitHub login and try again." -ForegroundColor Red
+        }
+    } else {
+        Write-Host "No changes to upload - the website is already up to date." -ForegroundColor Yellow
+    }
+} catch {
+    Write-Host "Git step failed: $_" -ForegroundColor Red
+} finally {
+    Pop-Location
+}
