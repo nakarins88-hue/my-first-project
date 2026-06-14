@@ -1,0 +1,4 @@
+# Local-only files — never upload to GitHub Pages
+_unused_downloads/
+*.temp.m4a
+.claude/

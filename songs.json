@@ -18,6 +18,12 @@
         "duration":  263
     },
     {
+        "filename":  "17.m4a",
+        "path":  "music/17.m4a",
+        "cover":  "default_cover.png",
+        "duration":  210
+    },
+    {
         "filename":  "306 - HONNE.m4a",
         "path":  "music/306%20-%20HONNE.m4a",
         "cover":  "default_cover.png",
@@ -100,6 +106,18 @@
         "path":  "music/almost%20monday%20-%20she%20likes%20sports.m4a",
         "cover":  "default_cover.png",
         "duration":  144
+    },
+    {
+        "filename":  "ANATOMY RABBIT กาลครั้งหนึ่งนานมาแล้ว (Official Audio).m4a",
+        "path":  "music/ANATOMY%20RABBIT%20%E0%B8%81%E0%B8%B2%E0%B8%A5%E0%B8%84%E0%B8%A3%E0%B8%B1%E0%B9%89%E0%B8%87%E0%B8%AB%E0%B8%99%E0%B8%B6%E0%B9%88%E0%B8%87%E0%B8%99%E0%B8%B2%E0%B8%99%E0%B8%A1%E0%B8%B2%E0%B9%81%E0%B8%A5%E0%B9%89%E0%B8%A7%20(Official%20Audio).m4a",
+        "cover":  "default_cover.png",
+        "duration":  null
+    },
+    {
+        "filename":  "And You.m4a",
+        "path":  "music/And%20You.m4a",
+        "cover":  "default_cover.png",
+        "duration":  284
     },
     {
         "filename":  "Anson Seabra - Come Close.m4a",
@@ -460,6 +478,12 @@
         "path":  "music/Damn%20Mountains%20-%20Brandt%20Orange.m4a",
         "cover":  "default_cover.png",
         "duration":  266
+    },
+    {
+        "filename":  "Dance with Me.m4a",
+        "path":  "music/Dance%20with%20Me.m4a",
+        "cover":  "default_cover.png",
+        "duration":  276
     },
     {
         "filename":  "Dane Amar - Green Tea \u0026 Honey feat. Jereena Montemayor.m4a",
@@ -1560,6 +1584,12 @@
         "duration":  199
     },
     {
+        "filename":  "Newery ต่อจากคืนนี้ (ฉันจะไม่มีเธอแล้ว) ｜ gloomy [Official MV].m4a",
+        "path":  "music/Newery%20%E0%B8%95%E0%B9%88%E0%B8%AD%E0%B8%88%E0%B8%B2%E0%B8%81%E0%B8%84%E0%B8%B7%E0%B8%99%E0%B8%99%E0%B8%B5%E0%B9%89%20(%E0%B8%89%E0%B8%B1%E0%B8%99%E0%B8%88%E0%B8%B0%E0%B9%84%E0%B8%A1%E0%B9%88%E0%B8%A1%E0%B8%B5%E0%B9%80%E0%B8%98%E0%B8%AD%E0%B9%81%E0%B8%A5%E0%B9%89%E0%B8%A7)%20%EF%BD%9C%20gloomy%20%5BOfficial%20MV%5D.m4a",
+        "cover":  "default_cover.png",
+        "duration":  299
+    },
+    {
         "filename":  "Niall Horan - Put A Little Love On Me.m4a",
         "path":  "music/Niall%20Horan%20-%20Put%20A%20Little%20Love%20On%20Me.m4a",
         "cover":  "default_cover.png",
@@ -1720,6 +1750,12 @@
         "path":  "music/Pink%20Sweat%24%20-%20Coke%20%26%20Henny%20Pt.%202.m4a",
         "cover":  "default_cover.png",
         "duration":  158
+    },
+    {
+        "filename":  "Pink.m4a",
+        "path":  "music/Pink.m4a",
+        "cover":  "default_cover.png",
+        "duration":  255
     },
     {
         "filename":  "Plastic Plastic - Butterflies.m4a",
@@ -2040,6 +2076,12 @@
         "duration":  206
     },
     {
+        "filename":  "Summertime (feat. Landokmai).m4a",
+        "path":  "music/Summertime%20(feat.%20Landokmai).m4a",
+        "cover":  "default_cover.png",
+        "duration":  246
+    },
+    {
         "filename":  "Sunday Moon (선데이문) - Somebody.m4a",
         "path":  "music/Sunday%20Moon%20(%EC%84%A0%EB%8D%B0%EC%9D%B4%EB%AC%B8)%20-%20Somebody.m4a",
         "cover":  "default_cover.png",
@@ -2286,6 +2328,12 @@
         "duration":  218
     },
     {
+        "filename":  "Wish.m4a",
+        "path":  "music/Wish.m4a",
+        "cover":  "default_cover.png",
+        "duration":  271
+    },
+    {
         "filename":  "With Love (feat. Mosaek).m4a",
         "path":  "music/With%20Love%20(feat.%20Mosaek).m4a",
         "cover":  "default_cover.png",
@@ -2364,6 +2412,12 @@
         "duration":  46
     },
     {
+        "filename":  "You.m4a",
+        "path":  "music/You.m4a",
+        "cover":  "default_cover.png",
+        "duration":  256
+    },
+    {
         "filename":  "Z9 บทสรุปสุดท้าย (Prod. by MARXPOLA) ｜ D!EOUT.m4a",
         "path":  "music/Z9%20%E0%B8%9A%E0%B8%97%E0%B8%AA%E0%B8%A3%E0%B8%B8%E0%B8%9B%E0%B8%AA%E0%B8%B8%E0%B8%94%E0%B8%97%E0%B9%89%E0%B8%B2%E0%B8%A2%20(Prod.%20by%20MARXPOLA)%20%EF%BD%9C%20D!EOUT.m4a",
         "cover":  "default_cover.png",
@@ -2398,6 +2452,72 @@
         "path":  "music/%E0%B8%82%E0%B9%89%E0%B8%AD.m4a",
         "cover":  "default_cover.png",
         "duration":  195
+    },
+    {
+        "filename":  "ขอให้เธอใจดี.m4a",
+        "path":  "music/%E0%B8%82%E0%B8%AD%E0%B9%83%E0%B8%AB%E0%B9%89%E0%B9%80%E0%B8%98%E0%B8%AD%E0%B9%83%E0%B8%88%E0%B8%94%E0%B8%B5.m4a",
+        "cover":  "default_cover.png",
+        "duration":  295
+    },
+    {
+        "filename":  "คงต้องบอกลาแล้ว.m4a",
+        "path":  "music/%E0%B8%84%E0%B8%87%E0%B8%95%E0%B9%89%E0%B8%AD%E0%B8%87%E0%B8%9A%E0%B8%AD%E0%B8%81%E0%B8%A5%E0%B8%B2%E0%B9%81%E0%B8%A5%E0%B9%89%E0%B8%A7.m4a",
+        "cover":  "default_cover.png",
+        "duration":  270
+    },
+    {
+        "filename":  "คิดถึง.m4a",
+        "path":  "music/%E0%B8%84%E0%B8%B4%E0%B8%94%E0%B8%96%E0%B8%B6%E0%B8%87.m4a",
+        "cover":  "default_cover.png",
+        "duration":  null
+    },
+    {
+        "filename":  "จะมอบความรัก.m4a",
+        "path":  "music/%E0%B8%88%E0%B8%B0%E0%B8%A1%E0%B8%AD%E0%B8%9A%E0%B8%84%E0%B8%A7%E0%B8%B2%E0%B8%A1%E0%B8%A3%E0%B8%B1%E0%B8%81.m4a",
+        "cover":  "default_cover.png",
+        "duration":  null
+    },
+    {
+        "filename":  "ปล่อยดาว.m4a",
+        "path":  "music/%E0%B8%9B%E0%B8%A5%E0%B9%88%E0%B8%AD%E0%B8%A2%E0%B8%94%E0%B8%B2%E0%B8%A7.m4a",
+        "cover":  "default_cover.png",
+        "duration":  null
+    },
+    {
+        "filename":  "รสหวาน.m4a",
+        "path":  "music/%E0%B8%A3%E0%B8%AA%E0%B8%AB%E0%B8%A7%E0%B8%B2%E0%B8%99.m4a",
+        "cover":  "default_cover.png",
+        "duration":  null
+    },
+    {
+        "filename":  "รักแรก (First Love) (เพลงประกอบภาพยนตร์.m4a",
+        "path":  "music/%E0%B8%A3%E0%B8%B1%E0%B8%81%E0%B9%81%E0%B8%A3%E0%B8%81%20(First%20Love)%20(%E0%B9%80%E0%B8%9E%E0%B8%A5%E0%B8%87%E0%B8%9B%E0%B8%A3%E0%B8%B0%E0%B8%81%E0%B8%AD%E0%B8%9A%E0%B8%A0%E0%B8%B2%E0%B8%9E%E0%B8%A2%E0%B8%99%E0%B8%95%E0%B8%A3%E0%B9%8C.m4a",
+        "cover":  "default_cover.png",
+        "duration":  null
+    },
+    {
+        "filename":  "ลา ลา ลา.m4a",
+        "path":  "music/%E0%B8%A5%E0%B8%B2%20%E0%B8%A5%E0%B8%B2%20%E0%B8%A5%E0%B8%B2.m4a",
+        "cover":  "default_cover.png",
+        "duration":  null
+    },
+    {
+        "filename":  "วน.m4a",
+        "path":  "music/%E0%B8%A7%E0%B8%99.m4a",
+        "cover":  "default_cover.png",
+        "duration":  null
+    },
+    {
+        "filename":  "หมวกเมฆสีรุ้ง.m4a",
+        "path":  "music/%E0%B8%AB%E0%B8%A1%E0%B8%A7%E0%B8%81%E0%B9%80%E0%B8%A1%E0%B8%86%E0%B8%AA%E0%B8%B5%E0%B8%A3%E0%B8%B8%E0%B9%89%E0%B8%87.m4a",
+        "cover":  "default_cover.png",
+        "duration":  258
+    },
+    {
+        "filename":  "หินหยดลงน้ำ (Adore).m4a",
+        "path":  "music/%E0%B8%AB%E0%B8%B4%E0%B8%99%E0%B8%AB%E0%B8%A2%E0%B8%94%E0%B8%A5%E0%B8%87%E0%B8%99%E0%B9%89%E0%B8%B3%20(Adore).m4a",
+        "cover":  "default_cover.png",
+        "duration":  null
     },
     {
         "filename":  "다운 (Dvwn) \u0027HOME.m4a",
