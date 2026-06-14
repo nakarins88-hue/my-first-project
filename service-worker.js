@@ -2,7 +2,7 @@
 // Jeff Bernat Cozy Music Lounge - Service Worker (PWA + Background Audio)
 // ==========================================================================
 
-const CACHE_NAME = 'cozy-lounge-v3';
+const CACHE_NAME = 'cozy-lounge-v4';
 
 // App shell files to pre-cache for fast loading
 const APP_SHELL = [
@@ -10,6 +10,8 @@ const APP_SHELL = [
   './index.html',
   './style.css',
   './player-v8.js',
+  './cozy-plus.js',
+  './cozy-plus.css',
   './visitor-counter.js',
   './visitor-counter.css',
   './manifest.json',

@@ -5,7 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Jeff Bernat Cozy Music Lounge 🌙</title>
   <meta name="description" content="สัมผัสบรรยากาศดนตรีอบอุ่นกับ Jeff Bernat Cozy Music Lounge ฟังเพลงเต็มความละเอียดสูง ผสมเสียงบรรยากาศฝนตก คาเฟ่ และเตาผิงไฟออฟไลน์">
-  
+  <meta name="author" content="Cozy Music Lounge">
+  <meta name="keywords" content="Jeff Bernat, Cozy Music, R&B, Soul, Lo-fi, Chill, ฟังเพลง, เพลงชิล, เพลย์ลิสต์, Ambient, Rain Sounds">
+  <meta name="color-scheme" content="dark light">
+  <meta name="format-detection" content="telephone=no">
+  <meta name="robots" content="index, follow">
+
+  <!-- Open Graph (สำหรับแชร์ลิงก์ใน Facebook/LINE ให้ขึ้นการ์ดสวย) -->
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Jeff Bernat Cozy Music Lounge">
+  <meta property="og:title" content="Jeff Bernat Cozy Music Lounge 🌙">
+  <meta property="og:description" content="ห้องฟังเพลงอบอุ่นสำหรับคนพิเศษ — ผสมเสียงฝน คาเฟ่ และเตาผิง พร้อมเพลย์ลิสต์ R&B/Soul สุดฟิน 💕">
+  <meta property="og:image" content="default_cover.png">
+  <meta property="og:locale" content="th_TH">
+
+  <!-- Twitter / X Card -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Jeff Bernat Cozy Music Lounge 🌙">
+  <meta name="twitter:description" content="ห้องฟังเพลงอบอุ่นสำหรับคนพิเศษ ผสมเสียงบรรยากาศฟิน ๆ 💕">
+  <meta name="twitter:image" content="default_cover.png">
+
   <!-- PWA Manifest & Theme -->
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0a0d14">
@@ -26,9 +45,11 @@
   <!-- FontAwesome for Premium Icons -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <!-- Core Stylesheet -->
-  <link rel="stylesheet" href="style.css?v=22">
+  <link rel="stylesheet" href="style.css?v=23">
   <!-- Visitor Counter Stylesheet -->
   <link rel="stylesheet" href="visitor-counter.css?v=3">
+  <!-- Cozy Plus Stylesheet (Sleep Timer, Speed, Shortcuts, Insights) -->
+  <link rel="stylesheet" href="cozy-plus.css?v=1">
 </head>
 <body class="theme-rain">
 
@@ -336,6 +357,22 @@
               <i class="fa-regular fa-heart"></i>
             </button>
 
+            <!-- Cozy Plus extra controls -->
+            <div class="cozy-extra-controls">
+              <button id="speed-btn" class="sub-btn cozy-extra-btn" title="ปรับความเร็วการเล่น (Playback Speed)" aria-label="ปรับความเร็วการเล่นเพลง">
+                <span class="speed-label">1x</span>
+              </button>
+              <button id="sleep-timer-btn" class="sub-btn cozy-extra-btn" title="ตั้งเวลานอน (Sleep Timer)" aria-label="ตั้งเวลาปิดเพลงอัตโนมัติ">
+                <i class="fa-solid fa-moon"></i>
+              </button>
+              <button id="insights-btn" class="sub-btn cozy-extra-btn" title="สถิติการฟังเพลง (Listening Insights)" aria-label="ดูสถิติการฟังเพลง">
+                <i class="fa-solid fa-chart-simple"></i>
+              </button>
+              <button id="kbd-help-btn" class="sub-btn cozy-extra-btn show-desktop-only" title="คีย์ลัด (Keyboard Shortcuts)" aria-label="ดูคีย์ลัดทั้งหมด">
+                <i class="fa-solid fa-keyboard"></i>
+              </button>
+            </div>
+
             <!-- Volume Control slider -->
             <div class="player-volume-wrapper">
               <i class="fa-solid fa-volume-low volume-icon" id="player-volume-icon"></i>
@@ -593,7 +630,9 @@
   
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jsmediatags/3.9.5/jsmediatags.min.js"></script>
   <!-- Main JavaScript File -->
-  <script src="player-v8.js?v=24"></script>
+  <script src="player-v8.js?v=25"></script>
+  <!-- Cozy Plus: Sleep Timer, Speed, Shortcuts, Listening Insights -->
+  <script src="cozy-plus.js?v=1"></script>
   
   <!-- Real-time Visitor Counter Integration -->
   <script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
@@ -635,6 +674,62 @@
       </div>
     </div>
   </div>
-    
+
+  <!-- ===== Cozy Plus: Sleep Timer Popover ===== -->
+  <div id="sleep-timer-popover" class="cozy-popover" role="dialog" aria-label="ตั้งเวลานอน">
+    <div class="cozy-popover-title"><i class="fa-solid fa-moon"></i> ตั้งเวลานอน 💤</div>
+    <p class="cozy-popover-sub">เพลงจะค่อย ๆ เบาลงแล้วหยุดเอง ฝันดีนะ 🌙</p>
+    <div class="sleep-options">
+      <button class="sleep-opt" data-min="15">15 นาที</button>
+      <button class="sleep-opt" data-min="30">30 นาที</button>
+      <button class="sleep-opt" data-min="45">45 นาที</button>
+      <button class="sleep-opt" data-min="60">1 ชั่วโมง</button>
+      <button class="sleep-opt" data-min="90">1.5 ชม.</button>
+      <button class="sleep-opt" data-min="120">2 ชั่วโมง</button>
+    </div>
+    <div class="sleep-active-row" id="sleep-active-row">
+      <span class="sleep-remaining-label"><i class="fa-regular fa-clock"></i> เหลืออีก <strong id="sleep-remaining">--:--</strong></span>
+      <button id="sleep-cancel-btn"><i class="fa-solid fa-xmark"></i> ยกเลิก</button>
+    </div>
+  </div>
+
+  <!-- ===== Cozy Plus: Listening Insights Popover ===== -->
+  <div id="insights-popover" class="cozy-popover insights-popover" role="dialog" aria-label="สถิติการฟังเพลง">
+    <div class="cozy-popover-title"><i class="fa-solid fa-chart-simple"></i> สถิติการฟังของหมูเล็ก ✨</div>
+    <div class="insights-stats">
+      <div class="insight-stat"><span class="insight-num" id="insight-total-plays">0</span><span class="insight-cap">ครั้งที่เล่น</span></div>
+      <div class="insight-stat"><span class="insight-num" id="insight-total-time">0 น.</span><span class="insight-cap">เวลาฟังรวม</span></div>
+      <div class="insight-stat"><span class="insight-num" id="insight-unique">0</span><span class="insight-cap">เพลงที่ฟัง</span></div>
+    </div>
+    <div class="insight-top-title"><i class="fa-solid fa-heart"></i> เพลงที่ฟังบ่อยที่สุด</div>
+    <ol class="insight-top-list" id="insight-top-list">
+      <li class="insight-empty">ยังไม่มีข้อมูล เริ่มฟังเพลงกันเลย 🎵</li>
+    </ol>
+  </div>
+
+  <!-- ===== Cozy Plus: Keyboard Shortcuts Help Overlay ===== -->
+  <div id="kbd-help-overlay" class="kbd-help-overlay" role="dialog" aria-label="คีย์ลัดทั้งหมด">
+    <div class="kbd-help-card glass-card">
+      <div class="kbd-help-header">
+        <h3><i class="fa-solid fa-keyboard text-accent"></i> คีย์ลัด (Keyboard Shortcuts)</h3>
+        <button class="kbd-help-close" id="kbd-help-close" type="button" aria-label="ปิดหน้าต่างคีย์ลัด"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="kbd-help-grid">
+        <div class="kbd-row"><span class="kbd-keys"><kbd>Space</kbd></span><span class="kbd-desc">เล่น / หยุดชั่วคราว</span></div>
+        <div class="kbd-row"><span class="kbd-keys"><kbd>←</kbd> <kbd>→</kbd></span><span class="kbd-desc">เพลงก่อนหน้า / ถัดไป</span></div>
+        <div class="kbd-row"><span class="kbd-keys"><kbd>↑</kbd> <kbd>↓</kbd></span><span class="kbd-desc">เพิ่ม / ลดเสียง</span></div>
+        <div class="kbd-row"><span class="kbd-keys"><kbd>M</kbd></span><span class="kbd-desc">ปิด / เปิดเสียง</span></div>
+        <div class="kbd-row"><span class="kbd-keys"><kbd>F</kbd></span><span class="kbd-desc">เพิ่มเพลงนี้ลงรายการโปรด</span></div>
+        <div class="kbd-row"><span class="kbd-keys"><kbd>S</kbd></span><span class="kbd-desc">สุ่มเล่น (Shuffle)</span></div>
+        <div class="kbd-row"><span class="kbd-keys"><kbd>R</kbd></span><span class="kbd-desc">เล่นซ้ำ (Repeat)</span></div>
+        <div class="kbd-row"><span class="kbd-keys"><kbd>0</kbd> – <kbd>9</kbd></span><span class="kbd-desc">ข้ามไป 0–90% ของเพลง</span></div>
+        <div class="kbd-row"><span class="kbd-keys"><kbd>,</kbd> <kbd>.</kbd></span><span class="kbd-desc">ถอย / เดินหน้า 5 วินาที</span></div>
+        <div class="kbd-row"><span class="kbd-keys"><kbd>T</kbd></span><span class="kbd-desc">ตั้งเวลานอน (Sleep Timer)</span></div>
+        <div class="kbd-row"><span class="kbd-keys"><kbd>?</kbd></span><span class="kbd-desc">เปิด / ปิดหน้าต่างนี้</span></div>
+      </div>
+      <p class="kbd-help-foot">made with 💖 for หมูเล็ก</p>
+    </div>
+  </div>
+
 </body>
 </html>
